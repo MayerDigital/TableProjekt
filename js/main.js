@@ -143,6 +143,17 @@ async function connectToRoom(roomCode, name, mode = "join") {
       roomType: selectedRoomType,
     });
 
+    // 🔥 OWNER ERKENNEN
+    const room = result.room;
+    const participant = result.participant;
+
+    const isOwner = room.owner_id === participant.id;
+    state.isOwner = isOwner;
+
+    console.log("👑 Owner ID:", room.owner_id);
+    console.log("🙋 Ich:", participant.id);
+    console.log("✅ Bin ich Owner?", isOwner);
+
     const actualRoomType =
       result?.room?.room_type || selectedRoomType || DEFAULTS.roomType;
 
