@@ -68,32 +68,19 @@ function renderRoomInfo() {
   );
 }
 
-// 🔥 ZENTRALE BUTTON-STEUERUNG
+// 🔥 ZENTRALE BUTTON-STEUERUNG (NUR workRow!)
 function updateUIVisibility() {
   const hasRoom = !!state.currentRoom;
   const hasParticipant = !!state.currentUser.participantId;
-  const isOwner = !!state.isOwner;
 
-  const ownerControls = document.getElementById("ownerControls");
-  const workBtn = document.getElementById("startWorkBtn");
+  const workRow = document.getElementById("workRow");
 
-  // ❌ nichts aktiv → alles aus
   if (!hasRoom || !hasParticipant) {
-    if (ownerControls) ownerControls.style.display = "none";
-    if (workBtn) workBtn.style.display = "none";
+    if (workRow) workRow.style.display = "none";
     return;
   }
 
-  // 👤 Teilnehmer
-  if (!isOwner) {
-    if (ownerControls) ownerControls.style.display = "none";
-    if (workBtn) workBtn.style.display = "inline-block";
-    return;
-  }
-
-  // 👑 Owner
-  if (ownerControls) ownerControls.style.display = "block";
-  if (workBtn) workBtn.style.display = "inline-block";
+  if (workRow) workRow.style.display = "flex";
 }
 
 // 🔥 BUTTON STATUS (arbeitet / frei)
@@ -238,7 +225,7 @@ async function connectToRoom(roomCode, name, mode = "join") {
     console.log("🙋 Ich:", participant.id);
     console.log("✅ Bin ich Owner?", isOwner);
 
-    updateUIVisibility(); // 🔥 HIER WICHTIG
+    updateUIVisibility();
 
     const actualRoomType =
       result?.room?.room_type || selectedRoomType || DEFAULTS.roomType;
