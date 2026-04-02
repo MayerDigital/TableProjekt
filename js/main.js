@@ -27,7 +27,8 @@ import {
   subscribeParticipantsRealtime,
   updateCurrentParticipantPresence,
   startWork,
-  removeParticipant // 🔥 NEU
+  removeParticipant,
+  leaveRoom // 🔥 NEU
 } from "./room.js";
 import { bindChatEvents, initChatForRoom } from "./chat.js";
 
@@ -100,7 +101,7 @@ function updateWorkButton() {
   if (!btn) return;
 
   const myId = state.currentUser.participantId;
-  const workingUser = state.participants.find(p => p.working);
+  const workingUser = state.participants.find((p) => p.working);
 
   if (!workingUser) {
     btn.style.background = "#ffc107";
@@ -143,9 +144,7 @@ function renderParticipants() {
       const speaker = participant.speaker ? "Lautsprecher an" : "Lautsprecher aus";
       const mic = participant.mic ? "Mikro an" : "Mikro aus";
 
-      const working = participant.working
-        ? "🔥 Arbeitet gerade"
-        : "Beobachtet";
+      const working = participant.working ? "🔥 Arbeitet gerade" : "Beobachtet";
 
       return `
         <div class="participant-card">
@@ -196,7 +195,7 @@ async function handleStartWork() {
     return;
   }
 
-  const workingUser = state.participants.find(p => p.working);
+  const workingUser = state.participants.find((p) => p.working);
 
   try {
     if (workingUser && workingUser.id === participantId) {
@@ -211,7 +210,6 @@ async function handleStartWork() {
     const fresh = await loadParticipants(state.currentRoom);
     setParticipants(fresh);
     renderParticipants();
-
   } catch (error) {
     console.error(error);
     setStatus(dom.statusBox, error.message || "Fehler bei Arbeit", true);
@@ -256,32 +254,31 @@ async function connectToRoom(roomCode, name, mode = "join") {
     await loadParticipants(roomCode);
     renderParticipants();
 
-subscribeParticipantsRealtime(roomCode, async () => {
+    subscribeParticipantsRealtime(roomCode, async () => {
+      const myId = state.currentUser.participantId;
 
-  const myId = state.currentUser.participantId;
+      // 🔥 IMMER frisch aus DB laden
+      const fresh = await loadParticipants(roomCode);
+      setParticipants(fresh);
+      renderParticipants();
 
-  // 🔥 IMMER frisch aus DB laden
-  const fresh = await loadParticipants(roomCode);
-  setParticipants(fresh);
-  renderParticipants();
+      if (!myId) return;
 
-  if (!myId) return;
+      // 🔥 DIREKTE EXISTENZPRÜFUNG
+      const stillExists = fresh.some((p) => p.id === myId);
 
-  // 🔥 DIREKTE EXISTENZPRÜFUNG
-  const stillExists = fresh.some(p => p.id === myId);
+      if (!stillExists) {
+        setStatus(dom.statusBox, "❌ Du wurdest entfernt", true);
 
-  if (!stillExists) {
-    setStatus(dom.statusBox, "❌ Du wurdest entfernt", true);
+        localStorage.removeItem("participantId");
 
-    localStorage.removeItem("participantId");
+        state.currentUser.participantId = null;
+        setCurrentRoom(null);
+        setParticipants([]);
 
-    state.currentUser.participantId = null;
-    setCurrentRoom(null);
-    setParticipants([]);
-
-    renderParticipants();
-  }
-});
+        renderParticipants();
+      }
+    });
 
     await initChatForRoom(roomCode);
 
@@ -388,112 +385,72 @@ function bindEvents() {
   dom.createRoomBtn?.addEventListener("click", handleCreateRoom);
   dom.joinRoomBtn?.addEventListener("click", handleJoinRoom);
 
-// 🔥 WORK BUTTON
-document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
+  // 🔥 WORK BUTTON
+  document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
 
-// 🚪 RAUM VERLASSEN (GETRENNT!)
-document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
+  // 🚪 RAUM VERLASSEN (GETRENNT!)
+  document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
+    const myId = state.currentUser.participantId;
 
-  const myId = state.currentUser.participantId;
+    if (!myId) return;
 
-  if (!myId) return;
+    try {
+      await leaveRoom(myId);
 
-  try {
-    await leaveRoom(myId);
+      localStorage.removeItem("participantId");
 
-    localStorage.removeItem("participantId");
+      state.currentUser.participantId = null;
+      setCurrentRoom(null);
+      setParticipants([]);
 
-    state.currentUser.participantId = null;
-    setCurrentRoom(null);
-    setParticipants([]);
+      renderParticipants();
+      updateUIVisibility();
 
-    renderParticipants();
-    updateUIVisibility();
+      setStatus(dom.statusBox, "Du hast den Raum verlassen");
+    } catch (e) {
+      console.error(e);
+      setStatus(dom.statusBox, "Fehler beim Verlassen", true);
+    }
+  });
 
-    setStatus(dom.statusBox, "Du hast den Raum verlassen");
+  // 👑 TEILNEHMER ENTFERNEN
+  document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
+    const myId = state.currentUser.participantId;
 
-  } catch (e) {
-    console.error(e);
-    setStatus(dom.statusBox, "Fehler beim Verlassen", true);
-  }
-});
+    const others = state.participants.filter((p) => p.id !== myId);
 
-// 👑 TEILNEHMER ENTFERNEN
-document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
+    if (others.length === 0) {
+      setStatus(dom.statusBox, "Kein Teilnehmer vorhanden");
+      return;
+    }
 
-  const myId = state.currentUser.participantId;
+    const list = others.map((p, i) => `${i + 1}: ${p.name}`).join("\n");
 
-  const others = state.participants.filter(p => p.id !== myId);
+    const input = prompt(`Wen entfernen?\n${list}`);
 
-  if (others.length === 0) {
-    setStatus(dom.statusBox, "Kein Teilnehmer vorhanden");
-    return;
-  }
+    const index = parseInt(input) - 1;
 
-  const list = others.map((p, i) => `${i + 1}: ${p.name}`).join("\n");
+    if (isNaN(index) || !others[index]) {
+      setStatus(dom.statusBox, "Abbruch");
+      return;
+    }
 
-  const input = prompt(`Wen entfernen?\n${list}`);
+    const target = others[index];
 
-  const index = parseInt(input) - 1;
+    try {
+      await removeParticipant(target.id);
 
-  if (isNaN(index) || !others[index]) {
-    setStatus(dom.statusBox, "Abbruch");
-    return;
-  }
+      setStatus(dom.statusBox, `${target.name} entfernt`);
 
-  const target = others[index];
+      const fresh = await loadParticipants(state.currentRoom);
+      setParticipants(fresh);
+      renderParticipants();
+    } catch (e) {
+      console.error(e);
+      setStatus(dom.statusBox, "Fehler beim Entfernen", true);
+    }
+  });
 
-  try {
-    await removeParticipant(target.id);
-
-    setStatus(dom.statusBox, `${target.name} entfernt`);
-
-    const fresh = await loadParticipants(state.currentRoom);
-    setParticipants(fresh);
-    renderParticipants();
-
-  } catch (e) {
-    console.error(e);
-    setStatus(dom.statusBox, "Fehler beim Entfernen", true);
-  }
-});
-  const myId = state.currentUser.participantId;
-
-  const others = state.participants.filter(p => p.id !== myId);
-
-  if (others.length === 0) {
-    setStatus(dom.statusBox, "Kein Teilnehmer vorhanden");
-    return;
-  }
-
-  // 🔥 Auswahl anzeigen
-  const list = others.map((p, i) => `${i + 1}: ${p.name}`).join("\n");
-
-  const input = prompt(`Wen entfernen?\n${list}`);
-
-  const index = parseInt(input) - 1;
-
-  if (isNaN(index) || !others[index]) {
-    setStatus(dom.statusBox, "Abbruch");
-    return;
-  }
-
-  const target = others[index];
-
-  try {
-    await removeParticipant(target.id);
-
-    setStatus(dom.statusBox, `${target.name} entfernt`);
-
-    const fresh = await loadParticipants(state.currentRoom);
-    setParticipants(fresh);
-    renderParticipants();
-
-  } catch (e) {
-    console.error(e);
-    setStatus(dom.statusBox, "Fehler beim Entfernen", true);
-  }
-});
   dom.toggleVisualBtn?.addEventListener("click", () => handleTogglePresence("visual"));
   dom.toggleSpeakerBtn?.addEventListener("click", () => handleTogglePresence("speaker"));
   dom.toggleMicBtn?.addEventListener("click", () => handleTogglePresence("mic"));
