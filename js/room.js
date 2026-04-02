@@ -294,8 +294,12 @@ export async function joinPreparedRoom({
 }) {
   setCurrentRoom(roomCode);
 
+  const client = getSupabaseClient();
+
+  // 🔍 Erst schauen ob Raum existiert
   let room = await findRoomByCode(roomCode);
 
+  // 👤 IMMER Teilnehmer zuerst erstellen
   const participant = await addParticipantToRoom({
     roomCode,
     name,
@@ -304,16 +308,24 @@ export async function joinPreparedRoom({
     mic: presence.mic,
   });
 
-  // 🔥 WICHTIG: Owner NACH Participant setzen + neu laden
+  // 🏗️ Wenn Raum NICHT existiert → JETZT erstellen (mit korrekter owner_id)
   if (!room) {
-    room = await createRoomInDb(roomCode, name, roomType);
-  }
+    const { data, error } = await client
+      .from(TABLES.rooms)
+      .insert([
+        {
+          code: roomCode,
+          owner: name,
+          owner_id: participant.id, // 🔥 JETZT KORREKT
+          room_type: roomType,
+        },
+      ])
+      .select()
+      .single();
 
-  if (!room.owner_id && participant?.id) {
-    await setRoomOwner(roomCode, participant.id);
+    if (error) throw error;
 
-    // 🔥 FIX: Raum neu laden
-    room = await findRoomByCode(roomCode);
+    room = data;
   }
 
   await loadParticipants(roomCode);
