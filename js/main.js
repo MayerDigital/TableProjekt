@@ -386,7 +386,30 @@ function bindEvents() {
 
   document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
 document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
+document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
 
+  const myId = state.currentUser.participantId;
+
+  if (!myId) return;
+
+  try {
+    await removeParticipant(myId);
+
+    setStatus(dom.statusBox, "Du hast den Raum verlassen");
+
+    localStorage.removeItem("participantId");
+
+    state.currentUser.participantId = null;
+    setCurrentRoom(null);
+    setParticipants([]);
+
+    renderParticipants();
+
+  } catch (e) {
+    console.error(e);
+    setStatus(dom.statusBox, "Fehler beim Verlassen", true);
+  }
+});
   const myId = state.currentUser.participantId;
 
   const others = state.participants.filter(p => p.id !== myId);
