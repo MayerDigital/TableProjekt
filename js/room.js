@@ -22,7 +22,6 @@ function normalizeParticipantRow(row) {
   };
 }
 
-// 🔥 NEU: Owner wird später gesetzt
 export async function setRoomOwner(roomCode, participantId) {
   const client = getSupabaseClient();
 
@@ -36,22 +35,24 @@ export async function setRoomOwner(roomCode, participantId) {
   if (error) throw error;
 }
 
-// 🔥 FIX: ARBEIT STARTEN + STOPPEN
+// 🔥 FIX FINAL
 export async function startWork(participantId, roomCode) {
   const client = getSupabaseClient();
 
-  // 🔓 FALL: FREIGEBEN (participantId = null)
+  // 🔓 STOP (WICHTIGER FIX!)
   if (!participantId) {
+    const myId = state.currentUser.participantId;
+
     const { error } = await client
       .from(TABLES.participants)
       .update({ working: false })
-      .eq("room_code", roomCode);
+      .eq("id", myId);
 
     if (error) throw error;
     return;
   }
 
-  // 🔍 prüfen ob jemand arbeitet
+  // 🔍 prüfen wer arbeitet
   const { data: currentWorkers, error: readError } = await client
     .from(TABLES.participants)
     .select("id")
@@ -63,12 +64,12 @@ export async function startWork(participantId, roomCode) {
   const someoneWorking = currentWorkers.length > 0;
   const iAmWorking = currentWorkers.some(p => p.id === participantId);
 
-  // ❌ jemand anderes arbeitet → BLOCKIEREN
+  // ❌ Blockieren wenn anderer arbeitet
   if (someoneWorking && !iAmWorking) {
     throw new Error("Jemand arbeitet bereits");
   }
 
-  // 🔄 alle stoppen
+  // 🔄 reset
   const { error: resetError } = await client
     .from(TABLES.participants)
     .update({ working: false })
@@ -76,13 +77,25 @@ export async function startWork(participantId, roomCode) {
 
   if (resetError) throw resetError;
 
-  // ✅ mich setzen
+  // ✅ setzen
   const { error: setError } = await client
     .from(TABLES.participants)
     .update({ working: true })
     .eq("id", participantId);
 
   if (setError) throw setError;
+}
+
+// 🔥 NEU: TEILNEHMER ENTFERNEN
+export async function removeParticipant(participantId) {
+  const client = getSupabaseClient();
+
+  const { error } = await client
+    .from(TABLES.participants)
+    .delete()
+    .eq("id", participantId);
+
+  if (error) throw error;
 }
 
 export async function createRoomInDb(
@@ -258,7 +271,6 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
   setParticipantsChannel(channel);
 }
 
-// 🔥 HIER PASSIERT DIE MAGIE
 export async function joinPreparedRoom({
   roomCode,
   name,
