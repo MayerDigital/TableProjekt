@@ -43,32 +43,28 @@ export async function startWork(participantId, roomCode) {
     .from(TABLES.participants)
     .select("id")
     .eq("room_code", roomCode)
-    .eq("working", true);
+    .eq("active", true); // 🔥 WICHTIG
 
   if (readError) throw readError;
 
-  const someoneWorking = currentWorkers.length > 0;
-  const iAmWorking = currentWorkers.some(p => p.id === participantId);
+  const someoneWorking = currentWorkers.some(p => p.working);
+  const iAmWorking = currentWorkers.some(p => p.id === participantId && p.working);
 
-  if (someoneWorking && !iAmWorking && participantId) {
+  if (someoneWorking && !iAmWorking) {
     throw new Error("Jemand arbeitet bereits");
   }
 
-  const { error: resetError } = await client
+  await client
     .from(TABLES.participants)
     .update({ working: false })
     .eq("room_code", roomCode);
 
-  if (resetError) throw resetError;
-
   if (!participantId) return;
 
-  const { error: setError } = await client
+  await client
     .from(TABLES.participants)
     .update({ working: true })
     .eq("id", participantId);
-
-  if (setError) throw setError;
 }
 
 // 🔥 TEILNEHMER ENTFERNEN
@@ -76,7 +72,19 @@ export async function removeParticipant(participantId) {
   const client = getSupabaseClient();
 
   const { error } = await client
-    .from("participants")
+    .from(TABLES.participants)
+    .update({ active: false, working: false })
+    .eq("id", participantId);
+
+  if (error) throw error;
+}
+
+// 🔥 RAUM VERLASSEN
+export async function leaveRoom(participantId) {
+  const client = getSupabaseClient();
+
+  const { error } = await client
+    .from(TABLES.participants)
     .update({ active: false, working: false })
     .eq("id", participantId);
 
@@ -176,6 +184,7 @@ export async function addParticipantToRoom({
         speaker,
         mic,
         working: false,
+        active: true, // 🔥 WICHTIG
       },
     ])
     .select()
@@ -216,7 +225,7 @@ export async function updateCurrentParticipantPresence() {
   return data || null;
 }
 
-// 📡 LOAD
+// 📡 LOAD (🔥 FIXED)
 export async function loadParticipants(roomCode) {
   const client = getSupabaseClient();
 
@@ -224,6 +233,7 @@ export async function loadParticipants(roomCode) {
     .from(TABLES.participants)
     .select("*")
     .eq("room_code", roomCode)
+    .eq("active", true) // 🔥 DAS IST DER FIX
     .order("joined_at", { ascending: true });
 
   if (error) throw error;
@@ -263,6 +273,18 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
       },
       async () => {
         await loadParticipants(roomCode);
+
+        // 🔥 ENTFERNT-ERKENNUNG
+        const me = state.currentUser.participantId;
+        const stillExists = state.participants.find(p => p.id === me);
+
+        if (!stillExists && state.currentRoom) {
+          alert("Du wurdest aus dem Raum entfernt");
+
+          setCurrentRoom(null);
+          setParticipants([]);
+        }
+
         if (typeof onChange === "function") {
           onChange();
         }
@@ -272,7 +294,6 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
       if (status === "SUBSCRIBED") {
         setRealtimeReady(true);
 
-        // 🔥 FIX: kleiner Delay gegen Timing-Bug
         setTimeout(async () => {
           await loadParticipants(roomCode);
           if (typeof onChange === "function") {
@@ -284,17 +305,8 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
 
   setParticipantsChannel(channel);
 }
-export async function leaveRoom(participantId) {
-  const client = getSupabaseClient();
 
-  const { error } = await client
-    .from("participants")
-    .update({ active: false, working: false })
-    .eq("id", participantId);
-
-  if (error) throw error;
-}
-// 🚀 JOIN FLOW (FIXED)
+// 🚀 JOIN FLOW
 export async function joinPreparedRoom({
   roomCode,
   name,
@@ -305,10 +317,8 @@ export async function joinPreparedRoom({
 
   const client = getSupabaseClient();
 
-  // 🔍 Erst schauen ob Raum existiert
   let room = await findRoomByCode(roomCode);
 
-  // 👤 IMMER Teilnehmer zuerst erstellen
   const participant = await addParticipantToRoom({
     roomCode,
     name,
@@ -317,7 +327,6 @@ export async function joinPreparedRoom({
     mic: presence.mic,
   });
 
-  // 🏗️ Wenn Raum NICHT existiert → JETZT erstellen (mit korrekter owner_id)
   if (!room) {
     const { data, error } = await client
       .from(TABLES.rooms)
@@ -325,7 +334,7 @@ export async function joinPreparedRoom({
         {
           code: roomCode,
           owner: name,
-          owner_id: participant.id, // 🔥 JETZT KORREKT
+          owner_id: participant.id,
           room_type: roomType,
         },
       ])
