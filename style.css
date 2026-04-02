@@ -412,3 +412,35 @@ input[type="text"]:focus {
     width: 100%;
   }
 }
+.chat-message {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.chat-message.own-message {
+  background: #fff4eb;
+  border-color: #ffc9a3;
+}
+
+.chat-message-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.chat-message-head span {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.chat-message-text {
+  line-height: 1.5;
+  word-break: break-word;
+}
