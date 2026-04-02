@@ -388,8 +388,10 @@ function bindEvents() {
   dom.createRoomBtn?.addEventListener("click", handleCreateRoom);
   dom.joinRoomBtn?.addEventListener("click", handleJoinRoom);
 
-  document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
-document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
+// 🔥 WORK BUTTON
+document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
+
+// 🚪 RAUM VERLASSEN (GETRENNT!)
 document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
 
   const myId = state.currentUser.participantId;
@@ -397,7 +399,7 @@ document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
   if (!myId) return;
 
   try {
-    await removeParticipant(myId);
+    await leaveRoom(myId);
 
     localStorage.removeItem("participantId");
 
@@ -406,12 +408,53 @@ document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
     setParticipants([]);
 
     renderParticipants();
+    updateUIVisibility();
 
     setStatus(dom.statusBox, "Du hast den Raum verlassen");
 
   } catch (e) {
     console.error(e);
     setStatus(dom.statusBox, "Fehler beim Verlassen", true);
+  }
+});
+
+// 👑 TEILNEHMER ENTFERNEN
+document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
+
+  const myId = state.currentUser.participantId;
+
+  const others = state.participants.filter(p => p.id !== myId);
+
+  if (others.length === 0) {
+    setStatus(dom.statusBox, "Kein Teilnehmer vorhanden");
+    return;
+  }
+
+  const list = others.map((p, i) => `${i + 1}: ${p.name}`).join("\n");
+
+  const input = prompt(`Wen entfernen?\n${list}`);
+
+  const index = parseInt(input) - 1;
+
+  if (isNaN(index) || !others[index]) {
+    setStatus(dom.statusBox, "Abbruch");
+    return;
+  }
+
+  const target = others[index];
+
+  try {
+    await removeParticipant(target.id);
+
+    setStatus(dom.statusBox, `${target.name} entfernt`);
+
+    const fresh = await loadParticipants(state.currentRoom);
+    setParticipants(fresh);
+    renderParticipants();
+
+  } catch (e) {
+    console.error(e);
+    setStatus(dom.statusBox, "Fehler beim Entfernen", true);
   }
 });
   const myId = state.currentUser.participantId;
