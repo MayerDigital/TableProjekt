@@ -160,6 +160,23 @@ export async function addParticipantToRoom({
 }) {
   const client = getSupabaseClient();
 
+  // 🔥 Prüfen ob schon vorhanden
+  const existingId = localStorage.getItem("participantId");
+
+  if (existingId) {
+    const { data: existing } = await client
+      .from(TABLES.participants)
+      .select("*")
+      .eq("id", existingId)
+      .maybeSingle();
+
+    if (existing) {
+      setParticipantId(existing.id);
+      return existing;
+    }
+  }
+
+  // 🔥 sonst neu erstellen
   const { data, error } = await client
     .from(TABLES.participants)
     .insert([
@@ -172,6 +189,20 @@ export async function addParticipantToRoom({
         working: false,
       },
     ])
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  const participant = data || null;
+
+  if (participant?.id) {
+    setParticipantId(participant.id);
+    localStorage.setItem("participantId", participant.id);
+  }
+
+  return participant;
+}
     .select()
     .single();
 
