@@ -252,19 +252,22 @@ async function connectToRoom(roomCode, name, mode = "join") {
     await loadParticipants(roomCode);
     renderParticipants();
 
- subscribeParticipantsRealtime(roomCode, () => {
+ subscribeParticipantsRealtime(roomCode, async () => {
   renderRoomInfo();
   renderParticipants();
 
-  // 🔥 NEU: Wurde ich entfernt?
   const myId = state.currentUser.participantId;
 
+  if (!myId) return;
+
+  // 🔥 DIREKT DB prüfen (wichtig!)
   const stillExists = state.participants.some(p => p.id === myId);
 
-  if (!stillExists && myId) {
-    setStatus(dom.statusBox, "Du wurdest aus dem Raum entfernt", true);
+  if (!stillExists) {
+    setStatus(dom.statusBox, "❌ Du wurdest aus dem Raum entfernt", true);
 
-    // optional: UI reset
+    // kompletter Reset
+    state.currentUser.participantId = null;
     setCurrentRoom(null);
     setParticipants([]);
 
