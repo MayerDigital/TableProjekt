@@ -4,15 +4,98 @@ import { setStatus } from "./utils.js";
 import { client } from "./supabase.js";
 
 // =============================
+// HILFSFUNKTIONEN
+// =============================
+
+function getStatusTarget() {
+  return document.getElementById("statusBox");
+}
+
+function getCurrentRoomValue() {
+  return state.currentRoom || state.state?.currentRoom || null;
+}
+
+function getCurrentParticipantNameValue() {
+  return (
+    state.currentParticipantName ||
+    state.state?.currentUser?.name ||
+    state.state?.currentParticipantName ||
+    null
+  );
+}
+
+function ensureSlot(slotIndex) {
+  if (!screenSlots[slotIndex]) {
+    screenSlots[slotIndex] = {
+      owner: null,
+      stream: null,
+      active: false,
+    };
+  }
+}
+
+function getSlotElements(slotIndex) {
+  const nr = slotIndex + 1;
+
+  return {
+    status: document.getElementById(`screenStatus${nr}`),
+    video: document.getElementById(`screenVideo${nr}`),
+    placeholder: document.getElementById(`screenPlaceholder${nr}`),
+  };
+}
+
+function updateSingleScreenUI(slotIndex) {
+  ensureSlot(slotIndex);
+
+  const slot = screenSlots[slotIndex];
+  const { status, video, placeholder } = getSlotElements(slotIndex);
+
+  if (status) {
+    status.textContent = slot.active
+      ? slot.owner
+        ? `${slot.owner} aktiv`
+        : "Aktiv"
+      : "Inaktiv";
+  }
+
+  if (video) {
+    if (slot.active && slot.stream) {
+      video.srcObject = slot.stream;
+      video.style.display = "block";
+    } else {
+      video.srcObject = null;
+      video.style.display = "none";
+    }
+  }
+
+  if (placeholder) {
+    if (slot.active && slot.stream) {
+      placeholder.style.display = "none";
+    } else if (slot.active && !slot.stream) {
+      placeholder.style.display = "flex";
+      placeholder.textContent = slot.owner
+        ? `${slot.owner} teilt gerade …`
+        : "Freigabe aktiv";
+    } else {
+      placeholder.style.display = "flex";
+      placeholder.textContent = "Keine Freigabe aktiv";
+    }
+  }
+}
+
+// =============================
 // RESET
 // =============================
 
 export function resetScreens() {
-  screenSlots.forEach(s => {
-    s.owner = null;
-    s.stream = null;
-    s.active = false;
-  });
+  for (let i = 0; i < 4; i++) {
+    ensureSlot(i);
+    screenSlots[i].owner = null;
+    screenSlots[i].stream = null;
+    screenSlots[i].active = false;
+  }
+
+  renderScreens();
 }
 
 // =============================
@@ -20,25 +103,51 @@ export function resetScreens() {
 // =============================
 
 export async function loadScreens() {
-  if (!state.currentRoom) return;
+  const roomCode = getCurrentRoomValue();
+  if (!roomCode) return;
 
-  const { data } = await client
+  const { data, error } = await client
     .from("screen_share")
     .select("*")
-    .eq("room_code", state.currentRoom)
+    .eq("room_code", roomCode)
     .eq("active", true);
 
-  resetScreens();
+  if (error) {
+    console.error(error);
+    setStatus(getStatusTarget(), "Screens konnten nicht geladen werden", true);
+    return;
+  }
 
-  (data || []).forEach(s => {
-    if (screenSlots[s.slot_index]) {
-      screenSlots[s.slot_index].owner = s.owner;
-      screenSlots[s.slot_index].active = true;
+  // Eigene lokale Streams merken
+  const localStreams = {};
+  for (let i = 0; i < 4; i++) {
+    ensureSlot(i);
+    if (screenSlots[i].stream) {
+      localStreams[i] = screenSlots[i].stream;
+    }
+  }
 
-      // eigener Stream bleibt lokal erhalten
-      if (state.currentParticipantName === s.owner) {
-        screenSlots[s.slot_index].stream =
-          screenSlots[s.slot_index].stream || null;
+  // Alles zurücksetzen, aber lokale Streams nicht blind verlieren
+  for (let i = 0; i < 4; i++) {
+    ensureSlot(i);
+    screenSlots[i].owner = null;
+    screenSlots[i].stream = null;
+    screenSlots[i].active = false;
+  }
+
+  const myName = getCurrentParticipantNameValue();
+
+  (data || []).forEach((s) => {
+    const index = Number(s.slot_index);
+
+    if (index >= 0 && index <= 3) {
+      ensureSlot(index);
+      screenSlots[index].owner = s.owner;
+      screenSlots[index].active = true;
+
+      // Nur den eigenen lokalen Stream wieder anhängen
+      if (myName && s.owner === myName && localStreams[index]) {
+        screenSlots[index].stream = localStreams[index];
       }
     }
   });
@@ -52,41 +161,84 @@ export async function loadScreens() {
 
 export async function startScreen(slotIndex) {
   try {
-    if (!state.currentRoom) {
-      setStatus("Kein Raum aktiv");
+    ensureSlot(slotIndex);
+
+    const roomCode = getCurrentRoomValue();
+    const participantName = getCurrentParticipantNameValue();
+
+    if (!roomCode) {
+      setStatus(getStatusTarget(), "Kein Raum aktiv", true);
       return;
     }
 
-    if (screenSlots[slotIndex]?.active &&
-        screenSlots[slotIndex]?.owner !== state.currentParticipantName) {
-      setStatus("Slot wird bereits genutzt");
+    if (!participantName) {
+      setStatus(getStatusTarget(), "Kein Teilnehmername aktiv", true);
       return;
+    }
+
+    if (
+      screenSlots[slotIndex]?.active &&
+      screenSlots[slotIndex]?.owner !== participantName
+    ) {
+      setStatus(getStatusTarget(), "Slot wird bereits genutzt", true);
+      return;
+    }
+
+    // Falls eigener Stream auf diesem Slot schon läuft: erst stoppen
+    if (
+      screenSlots[slotIndex]?.active &&
+      screenSlots[slotIndex]?.owner === participantName &&
+      screenSlots[slotIndex]?.stream
+    ) {
+      await stopScreen(slotIndex);
     }
 
     const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: true
+      video: true,
+      audio: false,
     });
 
     screenSlots[slotIndex].stream = stream;
-    screenSlots[slotIndex].owner = state.currentParticipantName;
+    screenSlots[slotIndex].owner = participantName;
     screenSlots[slotIndex].active = true;
 
-    await client.from("screen_share").insert([{
-      room_code: state.currentRoom,
-      owner: state.currentParticipantName,
-      slot_index: slotIndex,
-      active: true
-    }]);
+    // Vorherigen eigenen Eintrag für denselben Slot aufräumen
+    await client
+      .from("screen_share")
+      .delete()
+      .eq("room_code", roomCode)
+      .eq("owner", participantName)
+      .eq("slot_index", slotIndex);
 
-    stream.getTracks()[0].onended = () => {
-      stopScreen(slotIndex);
-    };
+    const { error } = await client.from("screen_share").insert([
+      {
+        room_code: roomCode,
+        owner: participantName,
+        slot_index: slotIndex,
+        active: true,
+      },
+    ]);
+
+    if (error) {
+      throw error;
+    }
+
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      track.onended = () => {
+        stopScreen(slotIndex);
+      };
+    }
 
     renderScreens();
-    setStatus("Screen " + (slotIndex + 1) + " gestartet");
-
+    setStatus(getStatusTarget(), `Bildschirm ${slotIndex + 1} gestartet`);
   } catch (err) {
-    setStatus("Screen Fehler: " + err.message);
+    console.error(err);
+    setStatus(
+      getStatusTarget(),
+      "Screen Fehler: " + (err?.message || "Unbekannter Fehler"),
+      true
+    );
   }
 }
 
@@ -96,30 +248,60 @@ export async function startScreen(slotIndex) {
 
 export async function stopScreen(slotIndex) {
   try {
+    ensureSlot(slotIndex);
+
+    const roomCode = getCurrentRoomValue();
+    const participantName = getCurrentParticipantNameValue();
     const slot = screenSlots[slotIndex];
 
     if (slot?.stream) {
-      slot.stream.getTracks().forEach(t => t.stop());
+      slot.stream.getTracks().forEach((t) => t.stop());
     }
 
     screenSlots[slotIndex] = {
       owner: null,
       stream: null,
-      active: false
+      active: false,
     };
 
-    await client
-      .from("screen_share")
-      .delete()
-      .eq("room_code", state.currentRoom)
-      .eq("owner", state.currentParticipantName)
-      .eq("slot_index", slotIndex);
+    if (roomCode && participantName) {
+      const { error } = await client
+        .from("screen_share")
+        .delete()
+        .eq("room_code", roomCode)
+        .eq("owner", participantName)
+        .eq("slot_index", slotIndex);
+
+      if (error) {
+        throw error;
+      }
+    }
 
     renderScreens();
-    setStatus("Screen " + (slotIndex + 1) + " beendet");
-
+    setStatus(getStatusTarget(), `Bildschirm ${slotIndex + 1} beendet`);
   } catch (err) {
-    setStatus("Stop Fehler: " + err.message);
+    console.error(err);
+    setStatus(
+      getStatusTarget(),
+      "Stop Fehler: " + (err?.message || "Unbekannter Fehler"),
+      true
+    );
+  }
+}
+
+// =============================
+// STOP ALLE EIGENEN SCREENS
+// =============================
+
+export async function stopAllMyScreens() {
+  const participantName = getCurrentParticipantNameValue();
+
+  for (let i = 0; i < 4; i++) {
+    ensureSlot(i);
+
+    if (screenSlots[i]?.owner === participantName) {
+      await stopScreen(i);
+    }
   }
 }
 
@@ -131,15 +313,15 @@ export async function toggleScreen() {
   const input = prompt("Screen wählen (1-4)", "1");
   if (!input) return;
 
-  const slot = parseInt(input) - 1;
+  const slot = parseInt(input, 10) - 1;
 
   if (slot < 0 || slot > 3) {
-    setStatus("Bitte 1-4 eingeben");
+    setStatus(getStatusTarget(), "Bitte 1-4 eingeben", true);
     return;
   }
 
-  const isMine =
-    screenSlots[slot]?.owner === state.currentParticipantName;
+  const participantName = getCurrentParticipantNameValue();
+  const isMine = screenSlots[slot]?.owner === participantName;
 
   if (isMine) {
     await stopScreen(slot);
@@ -149,45 +331,29 @@ export async function toggleScreen() {
 }
 
 // =============================
+// BUTTONS BINDEN
+// =============================
+
+export function bindScreenEvents() {
+  document.getElementById("shareScreenBtn1")?.addEventListener("click", () => startScreen(0));
+  document.getElementById("stopScreenBtn1")?.addEventListener("click", () => stopScreen(0));
+
+  document.getElementById("shareScreenBtn2")?.addEventListener("click", () => startScreen(1));
+  document.getElementById("stopScreenBtn2")?.addEventListener("click", () => stopScreen(1));
+
+  document.getElementById("shareScreenBtn3")?.addEventListener("click", () => startScreen(2));
+  document.getElementById("stopScreenBtn3")?.addEventListener("click", () => stopScreen(2));
+
+  document.getElementById("shareScreenBtn4")?.addEventListener("click", () => startScreen(3));
+  document.getElementById("stopScreenBtn4")?.addEventListener("click", () => stopScreen(3));
+}
+
+// =============================
 // RENDER
 // =============================
 
 export function renderScreens() {
-  const ids = [
-    "primaryScreen",
-    "screenThumb1",
-    "screenThumb2",
-    "screenThumb3"
-  ];
-
-  ids.forEach((id, i) => {
-    const box = document.getElementById(id);
-    if (!box) return;
-
-    const body = box.querySelector(".screen-slot-body");
-    if (!body) return;
-
-    body.innerHTML = "";
-
-    const slot = screenSlots[i];
-
-    if (slot.active && slot.stream) {
-      const video = document.createElement("video");
-      video.srcObject = slot.stream;
-      video.autoplay = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.style.width = "100%";
-      video.style.height = "100%";
-      video.style.objectFit = "contain";
-
-      body.appendChild(video);
-
-    } else if (slot.active && !slot.stream) {
-      body.innerHTML = `<p>${slot.owner} teilt...</p>`;
-
-    } else {
-      body.innerHTML = "<p>Keine Freigabe aktiv</p>";
-    }
-  });
+  for (let i = 0; i < 4; i++) {
+    updateSingleScreenUI(i);
+  }
 }
