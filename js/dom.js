@@ -1,6 +1,11 @@
 import { SELECTORS } from "./config.js";
 
 function getElement(selector) {
+  if (!selector) {
+    console.warn("Selector fehlt oder ist ungültig.");
+    return null;
+  }
+
   const element = document.querySelector(selector);
 
   if (!element) {
@@ -13,7 +18,6 @@ function getElement(selector) {
 export const dom = {
   nameInput: getElement(SELECTORS.nameInput),
   roomInput: getElement(SELECTORS.roomInput),
-  roomTypeSelect: getElement(SELECTORS.roomTypeSelect),
   createRoomBtn: getElement(SELECTORS.createRoomBtn),
   joinRoomBtn: getElement(SELECTORS.joinRoomBtn),
   statusBox: getElement(SELECTORS.statusBox),
