@@ -76,8 +76,8 @@ export async function removeParticipant(participantId) {
   const client = getSupabaseClient();
 
   const { error } = await client
-    .from(TABLES.participants)
-    .delete()
+    .from("participants")
+    .update({ active: false, working: false })
     .eq("id", participantId);
 
   if (error) throw error;
@@ -284,7 +284,16 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
 
   setParticipantsChannel(channel);
 }
+export async function leaveRoom(participantId) {
+  const client = getSupabaseClient();
 
+  const { error } = await client
+    .from("participants")
+    .update({ active: false, working: false })
+    .eq("id", participantId);
+
+  if (error) throw error;
+}
 // 🚀 JOIN FLOW (FIXED)
 export async function joinPreparedRoom({
   roomCode,
