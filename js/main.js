@@ -68,7 +68,7 @@ function renderRoomInfo() {
   );
 }
 
-// 🔥 NEU: BUTTON LOGIK
+// 🔥 NEU – BUTTON ZUSTAND
 function updateWorkButton() {
   const btn = document.getElementById("startWorkBtn");
   if (!btn) return;
@@ -76,7 +76,6 @@ function updateWorkButton() {
   const myId = state.currentUser.participantId;
   const workingUser = state.participants.find(p => p.working);
 
-  // 🟡 frei
   if (!workingUser) {
     btn.style.background = "#ffc107";
     btn.style.color = "#000";
@@ -84,7 +83,6 @@ function updateWorkButton() {
     return;
   }
 
-  // 🟢 ich arbeite
   if (workingUser.id === myId) {
     btn.style.background = "#28a745";
     btn.style.color = "#fff";
@@ -92,7 +90,6 @@ function updateWorkButton() {
     return;
   }
 
-  // 🔴 jemand anderes
   btn.style.background = "#dc3545";
   btn.style.color = "#fff";
   btn.textContent = `${workingUser.name} arbeitet`;
@@ -118,8 +115,9 @@ function renderParticipants() {
       const visual = participant.visual ? "Visuell an" : "Visuell aus";
       const speaker = participant.speaker ? "Lautsprecher an" : "Lautsprecher aus";
       const mic = participant.mic ? "Mikro an" : "Mikro aus";
+
       const working = participant.working
-        ? "🔥 Arbeitet"
+        ? "🔥 Arbeitet gerade"
         : "Beobachtet";
 
       return `
@@ -137,7 +135,8 @@ function renderParticipants() {
     })
     .join("");
 
-  updateWorkButton(); // 🔥 hier wird der Button aktualisiert
+  // 🔥 HIER WIRD BUTTON AKTUALISIERT
+  updateWorkButton();
 }
 
 function seedLocalParticipantPreview() {
@@ -161,6 +160,7 @@ function seedLocalParticipantPreview() {
   renderParticipants();
 }
 
+// 🔥 ARBEIT STARTEN
 async function handleStartWork() {
   const participantId = state.currentUser.participantId;
 
@@ -171,6 +171,8 @@ async function handleStartWork() {
 
   try {
     await startWork(participantId, state.currentRoom);
+
+    setStatus(dom.statusBox, "Du arbeitest jetzt");
 
     await loadParticipants(state.currentRoom);
     renderParticipants();
@@ -202,6 +204,10 @@ async function connectToRoom(roomCode, name, mode = "join") {
 
     const isOwner = room.owner_id === participant.id;
     state.isOwner = isOwner;
+
+    console.log("👑 Owner ID:", room.owner_id);
+    console.log("🙋 Ich:", participant.id);
+    console.log("✅ Bin ich Owner?", isOwner);
 
     const ownerBox = document.getElementById("ownerControls");
     if (ownerBox) {
@@ -251,6 +257,7 @@ function handleCreateRoom() {
 
   if (!name) {
     setStatus(dom.statusBox, "Bitte zuerst deinen Namen eingeben.", true);
+    dom.nameInput?.focus();
     return;
   }
 
@@ -267,9 +274,59 @@ function handleJoinRoom() {
   const name = dom.nameInput?.value?.trim() || "";
   const roomCode = normalizeRoomCode(dom.roomInput?.value || "");
 
-  if (!name || !roomCode) return;
+  if (!name) {
+    setStatus(dom.statusBox, "Bitte zuerst deinen Namen eingeben.", true);
+    dom.nameInput?.focus();
+    return;
+  }
+
+  if (!roomCode) {
+    setStatus(dom.statusBox, "Bitte einen Raumcode eingeben.", true);
+    dom.roomInput?.focus();
+    return;
+  }
+
+  if (dom.roomInput) {
+    dom.roomInput.value = roomCode;
+  }
 
   connectToRoom(roomCode, name, "join");
+}
+
+async function handleTogglePresence(type) {
+  togglePresence(type);
+  renderPresence();
+
+  if (!state.currentUser.participantId) {
+    seedLocalParticipantPreview();
+  }
+
+  try {
+    if (state.currentUser.participantId) {
+      await updateCurrentParticipantPresence();
+
+      if (state.currentRoom) {
+        await loadParticipants(state.currentRoom);
+        renderParticipants();
+      }
+    }
+
+    const labels = {
+      visual: "Visuell verbunden",
+      speaker: "Lautsprecher",
+      mic: "Mikrofon",
+    };
+
+    const currentValue = state.presence[type] ? "aktiv" : "inaktiv";
+    setStatus(dom.statusBox, `${labels[type]} ist jetzt ${currentValue}.`);
+  } catch (error) {
+    console.error(error);
+    setStatus(
+      dom.statusBox,
+      `Präsenz konnte nicht gespeichert werden: ${error.message || "Fehler"}`,
+      true
+    );
+  }
 }
 
 function bindEvents() {
@@ -278,7 +335,45 @@ function bindEvents() {
 
   document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
 
+  dom.toggleVisualBtn?.addEventListener("click", () => handleTogglePresence("visual"));
+  dom.toggleSpeakerBtn?.addEventListener("click", () => handleTogglePresence("speaker"));
+  dom.toggleMicBtn?.addEventListener("click", () => handleTogglePresence("mic"));
+
+  dom.nameInput?.addEventListener("input", (event) => {
+    setUserName(event.target.value);
+    if (!state.currentUser.participantId) {
+      seedLocalParticipantPreview();
+    }
+  });
+
+  dom.roomInput?.addEventListener("blur", () => {
+    if (!dom.roomInput) return;
+    dom.roomInput.value = normalizeRoomCode(dom.roomInput.value);
+  });
+
+  dom.roomTypeSelect?.addEventListener("change", () => {
+    if (!state.currentRoom) {
+      setCurrentRoomType(getSelectedRoomType());
+      renderRoomInfo();
+    }
+  });
+
   bindChatEvents();
+}
+
+function initSupabaseCheck() {
+  try {
+    getSupabaseClient();
+    return true;
+  } catch (error) {
+    console.error(error);
+    setStatus(
+      dom.statusBox,
+      `Supabase noch nicht bereit: ${error.message}`,
+      true
+    );
+    return false;
+  }
 }
 
 function init() {
@@ -291,16 +386,15 @@ function init() {
   renderRoomInfo();
   renderParticipants();
 
-  initSupabaseCheck();
-  setAppReady(true);
-}
+  const supabaseReady = initSupabaseCheck();
 
-function initSupabaseCheck() {
-  try {
-    getSupabaseClient();
-  } catch (error) {
-    console.error(error);
+  setAppReady(true);
+
+  if (supabaseReady) {
+    setStatus(dom.statusBox, DEFAULTS.statusMessage);
   }
+
+  console.log(`${APP_NAME} gestartet`, state);
 }
 
 init();
