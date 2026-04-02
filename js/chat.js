@@ -6,6 +6,12 @@ import { escapeHtml, setStatus } from "./utils.js";
 
 let chatChannel = null;
 let currentChatRoom = null;
+let chatEventsBound = false;
+
+function scrollChatToBottom() {
+  if (!dom.chatMessages) return;
+  dom.chatMessages.scrollTop = dom.chatMessages.scrollHeight;
+}
 
 function renderChatMessages(messages = []) {
   if (!dom.chatMessages) return;
@@ -28,8 +34,11 @@ function renderChatMessages(messages = []) {
           })
         : "";
 
+      const ownClass =
+        msg.sender === state.currentUser.name ? " own-message" : "";
+
       return `
-        <div class="participant-card">
+        <div class="participant-card${ownClass}">
           <div class="participant-name">${sender}</div>
           <div style="margin: 6px 0 8px 0;">${message}</div>
           <div class="participant-meta">
@@ -39,6 +48,8 @@ function renderChatMessages(messages = []) {
       `;
     })
     .join("");
+
+  scrollChatToBottom();
 }
 
 export async function loadChatMessages(roomCode) {
@@ -86,7 +97,11 @@ export function subscribeChatRealtime(roomCode) {
         await loadChatMessages(roomCode);
       }
     )
-    .subscribe();
+    .subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await loadChatMessages(roomCode);
+      }
+    });
 }
 
 export async function sendChatMessage() {
@@ -127,6 +142,7 @@ export async function sendChatMessage() {
 export async function initChatForRoom(roomCode) {
   if (!dom.chatInput || !dom.sendChatBtn) return;
 
+  currentChatRoom = roomCode;
   dom.chatInput.disabled = false;
   dom.sendChatBtn.disabled = false;
 
@@ -135,6 +151,9 @@ export async function initChatForRoom(roomCode) {
 }
 
 export function bindChatEvents() {
+  if (chatEventsBound) return;
+  chatEventsBound = true;
+
   dom.sendChatBtn?.addEventListener("click", async () => {
     try {
       await sendChatMessage();
