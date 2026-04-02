@@ -22,13 +22,14 @@ function normalizeParticipantRow(row) {
   };
 }
 
-// 👑 OWNER SETZEN
 export async function setRoomOwner(roomCode, participantId) {
   const client = getSupabaseClient();
 
   const { error } = await client
     .from(TABLES.rooms)
-    .update({ owner_id: participantId })
+    .update({
+      owner_id: participantId,
+    })
     .eq("code", roomCode);
 
   if (error) throw error;
@@ -38,7 +39,7 @@ export async function setRoomOwner(roomCode, participantId) {
 export async function startWork(participantId, roomCode) {
   const client = getSupabaseClient();
 
-  // 🔓 STOP
+  // 🔓 STOP (nur mich!)
   if (!participantId) {
     const myId = state.currentUser.participantId;
 
@@ -63,11 +64,12 @@ export async function startWork(participantId, roomCode) {
   const someoneWorking = currentWorkers.length > 0;
   const iAmWorking = currentWorkers.some(p => p.id === participantId);
 
+  // ❌ Blockieren wenn anderer arbeitet
   if (someoneWorking && !iAmWorking) {
     throw new Error("Jemand arbeitet bereits");
   }
 
-  // 🔄 reset
+  // 🔄 alle zurücksetzen
   const { error: resetError } = await client
     .from(TABLES.participants)
     .update({ working: false })
@@ -75,7 +77,7 @@ export async function startWork(participantId, roomCode) {
 
   if (resetError) throw resetError;
 
-  // ✅ setzen
+  // ✅ mich setzen
   const { error: setError } = await client
     .from(TABLES.participants)
     .update({ working: true })
@@ -84,7 +86,7 @@ export async function startWork(participantId, roomCode) {
   if (setError) throw setError;
 }
 
-// ❌ TEILNEHMER ENTFERNEN
+// 🔥 TEILNEHMER ENTFERNEN
 export async function removeParticipant(participantId) {
   const client = getSupabaseClient();
 
@@ -145,7 +147,9 @@ export async function createOrJoinRoom(
 ) {
   const existingRoom = await findRoomByCode(roomCode);
 
-  if (existingRoom) return existingRoom;
+  if (existingRoom) {
+    return existingRoom;
+  }
 
   return await createRoomInDb(roomCode, ownerName, roomType);
 }
@@ -272,14 +276,18 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
       },
       async () => {
         await loadParticipants(roomCode);
-        if (typeof onChange === "function") onChange();
+        if (typeof onChange === "function") {
+          onChange();
+        }
       }
     )
     .subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
         setRealtimeReady(true);
         await loadParticipants(roomCode);
-        if (typeof onChange === "function") onChange();
+        if (typeof onChange === "function") {
+          onChange();
+        }
       }
     });
 
