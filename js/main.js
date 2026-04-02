@@ -252,10 +252,25 @@ async function connectToRoom(roomCode, name, mode = "join") {
     await loadParticipants(roomCode);
     renderParticipants();
 
-    subscribeParticipantsRealtime(roomCode, () => {
-      renderRoomInfo();
-      renderParticipants();
-    });
+ subscribeParticipantsRealtime(roomCode, () => {
+  renderRoomInfo();
+  renderParticipants();
+
+  // 🔥 NEU: Wurde ich entfernt?
+  const myId = state.currentUser.participantId;
+
+  const stillExists = state.participants.some(p => p.id === myId);
+
+  if (!stillExists && myId) {
+    setStatus(dom.statusBox, "Du wurdest aus dem Raum entfernt", true);
+
+    // optional: UI reset
+    setCurrentRoom(null);
+    setParticipants([]);
+
+    renderParticipants();
+  }
+});
 
     await initChatForRoom(roomCode);
 
