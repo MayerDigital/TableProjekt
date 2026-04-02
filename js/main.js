@@ -379,28 +379,39 @@ function bindEvents() {
 
   document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
 document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
-  
- const myId = state.currentUser.participantId;
 
-if (!myId) {
-  setStatus(dom.statusBox, "Eigene ID fehlt", true);
-  return;
-}
+  const myId = state.currentUser.participantId;
 
-const target = state.participants.find(p => p.id !== myId);
+  const others = state.participants.filter(p => p.id !== myId);
 
-if (!target) {
-  setStatus(dom.statusBox, "Kein Teilnehmer vorhanden");
-  return;
-}
+  if (others.length === 0) {
+    setStatus(dom.statusBox, "Kein Teilnehmer vorhanden");
+    return;
+  }
+
+  // 🔥 Auswahl anzeigen
+  const list = others.map((p, i) => `${i + 1}: ${p.name}`).join("\n");
+
+  const input = prompt(`Wen entfernen?\n${list}`);
+
+  const index = parseInt(input) - 1;
+
+  if (isNaN(index) || !others[index]) {
+    setStatus(dom.statusBox, "Abbruch");
+    return;
+  }
+
+  const target = others[index];
 
   try {
     await removeParticipant(target.id);
+
     setStatus(dom.statusBox, `${target.name} entfernt`);
 
     const fresh = await loadParticipants(state.currentRoom);
     setParticipants(fresh);
     renderParticipants();
+
   } catch (e) {
     console.error(e);
     setStatus(dom.statusBox, "Fehler beim Entfernen", true);
