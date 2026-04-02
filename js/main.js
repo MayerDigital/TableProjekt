@@ -364,14 +364,20 @@ function bindEvents() {
 
   document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
 document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
-  const others = state.participants.filter(p => p.id !== state.currentUser.participantId);
+  
+ const myId = state.currentUser.participantId;
 
-  if (others.length === 0) {
-    setStatus(dom.statusBox, "Kein Teilnehmer vorhanden");
-    return;
-  }
+if (!myId) {
+  setStatus(dom.statusBox, "Eigene ID fehlt", true);
+  return;
+}
 
-  const target = others[0];
+const target = state.participants.find(p => p.id !== myId);
+
+if (!target) {
+  setStatus(dom.statusBox, "Kein Teilnehmer vorhanden");
+  return;
+}
 
   try {
     await removeParticipant(target.id);
