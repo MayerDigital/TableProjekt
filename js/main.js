@@ -399,8 +399,6 @@ document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
   try {
     await removeParticipant(myId);
 
-    setStatus(dom.statusBox, "Du hast den Raum verlassen");
-
     localStorage.removeItem("participantId");
 
     state.currentUser.participantId = null;
@@ -408,6 +406,8 @@ document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
     setParticipants([]);
 
     renderParticipants();
+
+    setStatus(dom.statusBox, "Du hast den Raum verlassen");
 
   } catch (e) {
     console.error(e);
