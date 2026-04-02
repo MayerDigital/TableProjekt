@@ -28,22 +28,8 @@ export async function loadChatMessages(roomCode) {
   return rows;
 }
 
-export async function sendChatMessage(messageText) {
+export async function sendChatMessage(text) {
   const client = getSupabaseClient();
-
-  if (!state.currentRoom) {
-    throw new Error("Kein aktiver Raum.");
-  }
-
-  if (!state.currentUser.name) {
-    throw new Error("Kein Teilnehmername vorhanden.");
-  }
-
-  const cleanMessage = String(messageText || "").trim();
-
-  if (!cleanMessage) {
-    throw new Error("Nachricht ist leer.");
-  }
 
   const { data, error } = await client
     .from(TABLES.chatMessages)
@@ -51,7 +37,7 @@ export async function sendChatMessage(messageText) {
       {
         room_code: state.currentRoom,
         sender: state.currentUser.name,
-        message: cleanMessage,
+        message: text,
       },
     ])
     .select();
@@ -88,9 +74,7 @@ export function subscribeChatRealtime(roomCode, onChange) {
       },
       async () => {
         await loadChatMessages(roomCode);
-        if (typeof onChange === "function") {
-          onChange();
-        }
+        if (typeof onChange === "function") onChange();
       }
     )
     .subscribe();
