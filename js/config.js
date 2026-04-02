@@ -1,5 +1,15 @@
 export const APP_NAME = "TableProjekt™";
-export const APP_VERSION = "1.0.0-step1";
+export const APP_VERSION = "1.0.0-step2";
+
+export const SUPABASE_URL = "HIER_DEINE_SUPABASE_URL_EINFUEGEN";
+export const SUPABASE_ANON_KEY = "HIER_DEINEN_SUPABASE_ANON_KEY_EINFUEGEN";
+
+export const TABLES = {
+  rooms: "rooms",
+  participants: "participants",
+  chatMessages: "chat_messages",
+  screens: "screens",
+};
 
 export const DEFAULTS = {
   roomPrefix: "TP",
