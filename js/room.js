@@ -22,24 +22,23 @@ function normalizeParticipantRow(row) {
   };
 }
 
+// 👑 OWNER SETZEN
 export async function setRoomOwner(roomCode, participantId) {
   const client = getSupabaseClient();
 
   const { error } = await client
     .from(TABLES.rooms)
-    .update({
-      owner_id: participantId,
-    })
+    .update({ owner_id: participantId })
     .eq("code", roomCode);
 
   if (error) throw error;
 }
 
-// 🔥 FINAL KORRIGIERT
+// 🔥 START / STOP ARBEIT
 export async function startWork(participantId, roomCode) {
   const client = getSupabaseClient();
 
-  // 🔓 STOP (nur mich!)
+  // 🔓 STOP
   if (!participantId) {
     const myId = state.currentUser.participantId;
 
@@ -64,12 +63,11 @@ export async function startWork(participantId, roomCode) {
   const someoneWorking = currentWorkers.length > 0;
   const iAmWorking = currentWorkers.some(p => p.id === participantId);
 
-  // ❌ Blockieren wenn anderer arbeitet
   if (someoneWorking && !iAmWorking) {
     throw new Error("Jemand arbeitet bereits");
   }
 
-  // 🔄 alle zurücksetzen
+  // 🔄 reset
   const { error: resetError } = await client
     .from(TABLES.participants)
     .update({ working: false })
@@ -77,7 +75,7 @@ export async function startWork(participantId, roomCode) {
 
   if (resetError) throw resetError;
 
-  // ✅ mich setzen
+  // ✅ setzen
   const { error: setError } = await client
     .from(TABLES.participants)
     .update({ working: true })
@@ -86,7 +84,7 @@ export async function startWork(participantId, roomCode) {
   if (setError) throw setError;
 }
 
-// 🔥 NEU: TEILNEHMER ENTFERNEN
+// ❌ TEILNEHMER ENTFERNEN
 export async function removeParticipant(participantId) {
   const client = getSupabaseClient();
 
@@ -98,6 +96,7 @@ export async function removeParticipant(participantId) {
   if (error) throw error;
 }
 
+// 🏠 RAUM ERSTELLEN
 export async function createRoomInDb(
   roomCode,
   ownerName,
@@ -123,6 +122,7 @@ export async function createRoomInDb(
   return data || null;
 }
 
+// 🔍 RAUM FINDEN
 export async function findRoomByCode(roomCode) {
   const client = getSupabaseClient();
 
@@ -137,6 +137,7 @@ export async function findRoomByCode(roomCode) {
   return data || null;
 }
 
+// 🔄 CREATE ODER JOIN
 export async function createOrJoinRoom(
   roomCode,
   ownerName,
@@ -144,13 +145,12 @@ export async function createOrJoinRoom(
 ) {
   const existingRoom = await findRoomByCode(roomCode);
 
-  if (existingRoom) {
-    return existingRoom;
-  }
+  if (existingRoom) return existingRoom;
 
   return await createRoomInDb(roomCode, ownerName, roomType);
 }
 
+// 👤 TEILNEHMER
 export async function addParticipantToRoom({
   roomCode,
   name,
@@ -160,7 +160,6 @@ export async function addParticipantToRoom({
 }) {
   const client = getSupabaseClient();
 
-  // 🔥 Prüfen ob schon vorhanden
   const existingId = localStorage.getItem("participantId");
 
   if (existingId) {
@@ -176,7 +175,6 @@ export async function addParticipantToRoom({
     }
   }
 
-  // 🔥 sonst neu erstellen
   const { data, error } = await client
     .from(TABLES.participants)
     .insert([
@@ -203,22 +201,8 @@ export async function addParticipantToRoom({
 
   return participant;
 }
-    .select()
-    .single();
 
-  if (error) throw error;
-
-  const participant = data || null;
-if (participant?.id) {
-  setParticipantId(participant.id);
-
-  // 🔥 NEU: speichern im Browser
-  localStorage.setItem("participantId", participant.id);
-}
-
-  return participant;
-}
-
+// 🔄 PRESENCE
 export async function updateCurrentParticipantPresence() {
   const client = getSupabaseClient();
   const participantId = state.currentUser.participantId;
@@ -241,6 +225,7 @@ export async function updateCurrentParticipantPresence() {
   return data || null;
 }
 
+// 📡 LOAD
 export async function loadParticipants(roomCode) {
   const client = getSupabaseClient();
 
@@ -257,6 +242,7 @@ export async function loadParticipants(roomCode) {
   return rows;
 }
 
+// 🔴 REALTIME
 export function unsubscribeParticipantsRealtime() {
   const client = getSupabaseClient();
   const channel = state.channels.participants;
@@ -286,24 +272,21 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
       },
       async () => {
         await loadParticipants(roomCode);
-        if (typeof onChange === "function") {
-          onChange();
-        }
+        if (typeof onChange === "function") onChange();
       }
     )
     .subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
         setRealtimeReady(true);
         await loadParticipants(roomCode);
-        if (typeof onChange === "function") {
-          onChange();
-        }
+        if (typeof onChange === "function") onChange();
       }
     });
 
   setParticipantsChannel(channel);
 }
 
+// 🚀 JOIN FLOW
 export async function joinPreparedRoom({
   roomCode,
   name,
