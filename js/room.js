@@ -36,6 +36,27 @@ export async function setRoomOwner(roomCode, participantId) {
   if (error) throw error;
 }
 
+// 🔥 NEU: ARBEIT STARTEN (ALLE ANDEREN STOPPEN)
+export async function startWork(participantId, roomCode) {
+  const client = getSupabaseClient();
+
+  // zuerst alle stoppen
+  const { error: resetError } = await client
+    .from(TABLES.participants)
+    .update({ working: false })
+    .eq("room_code", roomCode);
+
+  if (resetError) throw resetError;
+
+  // dann aktuellen Teilnehmer aktiv setzen
+  const { error: setError } = await client
+    .from(TABLES.participants)
+    .update({ working: true })
+    .eq("id", participantId);
+
+  if (setError) throw setError;
+}
+
 export async function createRoomInDb(
   roomCode,
   ownerName,
@@ -48,9 +69,9 @@ export async function createRoomInDb(
     .insert([
       {
         code: roomCode,
-        owner: ownerName, // bleibt für Anzeige
+        owner: ownerName,
         room_type: roomType,
-        owner_id: null, // 🔥 wird später gesetzt
+        owner_id: null,
       },
     ])
     .select()
@@ -228,10 +249,9 @@ export async function joinPreparedRoom({
     mic: presence.mic,
   });
 
-  // 🔥 WENN NOCH KEIN OWNER → SETZE IHN
   if (!room.owner_id && participant?.id) {
     await setRoomOwner(roomCode, participant.id);
-    room.owner_id = participant.id; // lokal aktualisieren
+    room.owner_id = participant.id;
   }
 
   await loadParticipants(roomCode);
