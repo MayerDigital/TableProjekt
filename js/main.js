@@ -74,6 +74,7 @@ function updateUIVisibility() {
   const hasParticipant = !!state.currentUser.participantId;
 
   const workRow = document.getElementById("workRow");
+  const removeBtn = document.getElementById("removeUserBtn");
 
   if (!hasRoom || !hasParticipant) {
     if (workRow) workRow.style.display = "none";
@@ -81,6 +82,11 @@ function updateUIVisibility() {
   }
 
   if (workRow) workRow.style.display = "flex";
+
+  // 🔒 Teilnehmer entfernen nur für Owner
+  if (removeBtn) {
+    removeBtn.style.display = state.isOwner ? "inline-block" : "none";
+  }
 }
 
 // 🔥 BUTTON STATUS (arbeitet / frei)
@@ -101,7 +107,7 @@ function updateWorkButton() {
   if (workingUser.id === myId) {
     btn.style.background = "#28a745";
     btn.style.color = "#fff";
-    btn.textContent = "Du arbeitest";
+    btn.textContent = "Du arbeitest (klicken zum Beenden)";
     return;
   }
 
@@ -176,7 +182,7 @@ function seedLocalParticipantPreview() {
   renderParticipants();
 }
 
-// 🔥 ARBEIT STARTEN
+// 🔥 ARBEIT START / STOP (FIX!)
 async function handleStartWork() {
   const participantId = state.currentUser.participantId;
 
@@ -185,16 +191,22 @@ async function handleStartWork() {
     return;
   }
 
-  try {
-    await startWork(participantId, state.currentRoom);
+  const me = state.participants.find(p => p.id === participantId);
 
-    setStatus(dom.statusBox, "Du arbeitest jetzt");
+  try {
+    if (me?.working) {
+      await startWork(null, state.currentRoom); // 🔓 FREIGEBEN
+      setStatus(dom.statusBox, "Arbeit beendet");
+    } else {
+      await startWork(participantId, state.currentRoom);
+      setStatus(dom.statusBox, "Du arbeitest jetzt");
+    }
 
     await loadParticipants(state.currentRoom);
     renderParticipants();
   } catch (error) {
     console.error(error);
-    setStatus(dom.statusBox, "Fehler beim Starten der Arbeit", true);
+    setStatus(dom.statusBox, "Fehler bei Arbeit", true);
   }
 }
 
