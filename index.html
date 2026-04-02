@@ -34,14 +34,24 @@
 
         <label class="field">
           <span>Dein Name</span>
-          <input id="nameInput" type="text" placeholder="z. B. Christian" />
+          <input
+            type="text"
+            id="nameInput"
+            placeholder="z. B. Christian"
+            autocomplete="name"
+          />
         </label>
 
         <label class="field">
           <span>Raumcode</span>
-          <input id="roomInput" type="text" placeholder="z. B. TP-4821" />
+          <input
+            type="text"
+            id="roomInput"
+            placeholder="z. B. TP-4821"
+            autocomplete="off"
+          />
         </label>
-        
+
         <label class="field">
          <span>Bereich</span>
          <select id="roomTypeSelect" class="select-field">
@@ -51,8 +61,12 @@
         </label>
 
         <div class="button-group">
-          <button id="createRoomBtn" class="btn btn-primary">Raum erstellen</button>
-          <button id="joinRoomBtn" class="btn btn-secondary">Raum beitreten</button>
+          <button id="createRoomBtn" class="btn btn-primary" type="button">
+            Raum erstellen
+          </button>
+          <button id="joinRoomBtn" class="btn btn-secondary" type="button">
+            Raum beitreten
+          </button>
         </div>
 
         <div class="status-box" id="statusBox">
@@ -65,23 +79,31 @@
 
         <div class="presence-grid">
           <div class="presence-item">
-            <span>Visuell verbunden</span>
+            <span class="presence-label">Visuell verbunden</span>
             <span id="visualStatus" class="presence-badge offline">Aus</span>
           </div>
+
           <div class="presence-item">
-            <span>Lautsprecher</span>
+            <span class="presence-label">Lautsprecher</span>
             <span id="speakerStatus" class="presence-badge offline">Aus</span>
           </div>
+
           <div class="presence-item">
-            <span>Mikrofon</span>
+            <span class="presence-label">Mikrofon</span>
             <span id="micStatus" class="presence-badge offline">Aus</span>
           </div>
         </div>
 
         <div class="toggle-group">
-          <button id="toggleVisualBtn" class="btn btn-light">Visuell</button>
-          <button id="toggleSpeakerBtn" class="btn btn-light">Lautsprecher</button>
-          <button id="toggleMicBtn" class="btn btn-light">Mikrofon</button>
+          <button id="toggleVisualBtn" class="btn btn-light" type="button">
+            Visuell
+          </button>
+          <button id="toggleSpeakerBtn" class="btn btn-light" type="button">
+            Lautsprecher
+          </button>
+          <button id="toggleMicBtn" class="btn btn-light" type="button">
+            Mikrofon
+          </button>
         </div>
       </section>
     </aside>
@@ -98,22 +120,22 @@
 
           <div class="room-meta">
             <div class="meta-chip">
-              <span>Aktueller Raum</span>
+              <span class="meta-label">Aktueller Raum</span>
               <strong id="currentRoomLabel">–</strong>
             </div>
 
             <div class="meta-chip">
-              <span>Arbeitsstatus</span>
+              <span class="meta-label">Arbeitsstatus</span>
               <strong id="workStatusLabel">Niemand arbeitet</strong>
             </div>
           </div>
         </div>
 
-        <!-- 👑 OWNER CONTROL (START AUS) -->
+        <!-- 🔥 OWNER CONTROL -->
         <div id="ownerControls" style="display:none; margin-bottom:15px;">
           <div style="background:#fff3e6; padding:10px; border-radius:10px; border:1px solid #ff6a00;">
             <strong>👑 Raumkontrolle</strong>
-            <div style="margin-top:8px; display:flex; gap:8px;">
+            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
               <button id="forceWorkBtn" class="btn btn-primary">Arbeit erzwingen</button>
               <button id="releaseWorkBtn" class="btn btn-secondary">Freigeben</button>
               <button id="removeUserBtn" class="btn btn-light">Teilnehmer entfernen</button>
@@ -121,38 +143,68 @@
           </div>
         </div>
 
-        <!-- 🔥 WORK BUTTON (START AUS!) -->
-        <div id="workButtonContainer" style="display:none; margin-bottom:15px;">
+        <!-- 🔥 NEU: ARBEITS BUTTON -->
+        <div style="margin-bottom:15px;">
           <button id="startWorkBtn" class="btn btn-primary">
             🔥 Ich arbeite jetzt
           </button>
         </div>
 
-        <div class="table-stage">
+        <div class="table-stage" id="tableStage">
           <div class="table-placeholder">
             <div class="table-placeholder-icon">TP</div>
             <h3>Der Tisch ist bereit</h3>
+            <p>
+              Im nächsten Schritt kommen Raumlogik, Teilnehmer, Chat,
+              Dateiablage und Bildschirmfreigaben dazu.
+            </p>
           </div>
         </div>
       </section>
 
       <section class="bottom-grid">
-        <section class="panel">
-          <h2>Teilnehmer</h2>
-          <span id="participantCountBadge">0</span>
-          <div id="participantsList"></div>
+        <section class="panel participants-panel">
+          <div class="panel-header">
+            <h2>Teilnehmer</h2>
+            <span id="participantCountBadge" class="small-badge">0</span>
+          </div>
+
+          <div id="participantsList" class="participants-list">
+            <div class="empty-state">
+              Noch keine Teilnehmer geladen.
+            </div>
+          </div>
         </section>
 
-        <section class="panel">
-          <h2>Chat</h2>
-          <div id="chatMessages"></div>
-          <input id="chatInput" disabled />
-          <button id="sendChatBtn" disabled>Senden</button>
+        <section class="panel chat-panel">
+          <div class="panel-header">
+            <h2>Chat</h2>
+            <span class="small-badge">Vorbereitung</span>
+          </div>
+
+          <div id="chatMessages" class="chat-messages">
+            <div class="empty-state">
+              Der Chat wird im nächsten Schritt aktiviert.
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+            <input
+              type="text"
+              id="chatInput"
+              placeholder="Nachricht eingeben …"
+              disabled
+            />
+            <button id="sendChatBtn" class="btn btn-primary" type="button" disabled>
+              Senden
+            </button>
+          </div>
         </section>
       </section>
     </main>
   </div>
 
-<script type="module" src="./js/main.js?v=6"></script>
+<script type="module" src="./js/main.js?v=4"></script>
+<script type="module" src="./js/main.js?v=5"></script>
 </body>
 </html>
