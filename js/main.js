@@ -1,9 +1,10 @@
-import { APP_NAME, DEFAULTS } from "./config.js";
+import { APP_NAME, DEFAULTS, ROOM_TYPES } from "./config.js";
 import { dom } from "./dom.js";
 import {
   state,
   setUserName,
   setCurrentRoom,
+  setCurrentRoomType,
   togglePresence,
   setParticipants,
   setAppReady,
@@ -28,6 +29,16 @@ import {
   subscribeChatRealtime,
 } from "./chat.js";
 
+function getSelectedRoomType() {
+  return dom.roomTypeSelect?.value || DEFAULTS.roomType;
+}
+
+function syncRoomTypeSelect() {
+  if (dom.roomTypeSelect) {
+    dom.roomTypeSelect.value = state.currentRoomType || DEFAULTS.roomType;
+  }
+}
+
 function updatePresenceBadge(element, isActive) {
   if (!element) return;
 
@@ -43,7 +54,14 @@ function renderPresence() {
 }
 
 function renderRoomInfo() {
-  setText(dom.currentRoomLabel, state.currentRoom || "–");
+  const roomTypeLabel =
+    ROOM_TYPES[state.currentRoomType] || ROOM_TYPES.business;
+
+  setText(
+    dom.currentRoomLabel,
+    state.currentRoom ? `${state.currentRoom} · ${roomTypeLabel}` : "–"
+  );
+
   setText(
     dom.workStatusLabel,
     state.currentRoom
@@ -188,9 +206,12 @@ function seedLocalParticipantPreview() {
 
 async function connectToRoom(roomCode, name, mode = "join") {
   try {
+    const selectedRoomType = getSelectedRoomType();
+
     setStatus(dom.statusBox, "Verbinde mit Supabase …");
     setUserName(name);
     setCurrentRoom(roomCode);
+    setCurrentRoomType(selectedRoomType);
     renderRoomInfo();
     updateChatAvailability();
     renderChatMessages();
@@ -199,7 +220,10 @@ async function connectToRoom(roomCode, name, mode = "join") {
       roomCode,
       name,
       presence: state.presence,
+      roomType: selectedRoomType,
     });
+
+    syncRoomTypeSelect();
 
     await loadParticipants(roomCode);
     renderParticipants();
@@ -221,10 +245,13 @@ async function connectToRoom(roomCode, name, mode = "join") {
     renderChatMessages();
     updateChatAvailability();
 
+    const roomTypeLabel =
+      ROOM_TYPES[state.currentRoomType] || ROOM_TYPES.business;
+
     const actionText =
       mode === "create"
-        ? `Raum ${roomCode} wurde erstellt und live verbunden.`
-        : `Du bist dem Raum ${roomCode} live beigetreten.`;
+        ? `Raum ${roomCode} (${roomTypeLabel}) wurde erstellt und live verbunden.`
+        : `Du bist dem Raum ${roomCode} (${roomTypeLabel}) live beigetreten.`;
 
     setStatus(dom.statusBox, actionText);
   } catch (error) {
@@ -373,6 +400,13 @@ function bindEvents() {
     if (!dom.roomInput) return;
     dom.roomInput.value = normalizeRoomCode(dom.roomInput.value);
   });
+
+  dom.roomTypeSelect?.addEventListener("change", () => {
+    if (!state.currentRoom) {
+      setCurrentRoomType(getSelectedRoomType());
+      renderRoomInfo();
+    }
+  });
 }
 
 function initSupabaseCheck() {
@@ -394,6 +428,8 @@ function init() {
   document.title = APP_NAME;
 
   bindEvents();
+  setCurrentRoomType(getSelectedRoomType());
+  syncRoomTypeSelect();
   renderPresence();
   renderRoomInfo();
   renderParticipants();
