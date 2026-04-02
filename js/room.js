@@ -35,9 +35,7 @@ export async function createRoomInDb(roomCode, ownerName) {
     ])
     .select();
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 
   return data?.[0] || null;
 }
@@ -51,9 +49,7 @@ export async function findRoomByCode(roomCode) {
     .eq("code", roomCode)
     .maybeSingle();
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 
   return data || null;
 }
@@ -61,14 +57,18 @@ export async function findRoomByCode(roomCode) {
 export async function createOrJoinRoom(roomCode, ownerName) {
   const existingRoom = await findRoomByCode(roomCode);
 
-  if (existingRoom) {
-    return existingRoom;
-  }
+  if (existingRoom) return existingRoom;
 
   return await createRoomInDb(roomCode, ownerName);
 }
 
-export async function addParticipantToRoom({ roomCode, name, visual, speaker, mic }) {
+export async function addParticipantToRoom({
+  roomCode,
+  name,
+  visual,
+  speaker,
+  mic,
+}) {
   const client = getSupabaseClient();
 
   const { data, error } = await client
@@ -85,9 +85,7 @@ export async function addParticipantToRoom({ roomCode, name, visual, speaker, mi
     ])
     .select();
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 
   const participant = data?.[0] || null;
 
@@ -114,9 +112,7 @@ export async function updateCurrentParticipantPresence() {
     .eq("id", participantId)
     .select();
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 
   return data?.[0] || null;
 }
@@ -130,9 +126,7 @@ export async function loadParticipants(roomCode) {
     .eq("room_code", roomCode)
     .order("joined_at", { ascending: true });
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 
   const rows = Array.isArray(data) ? data.map(normalizeParticipantRow) : [];
   setParticipants(rows);
@@ -175,6 +169,9 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
     .subscribe((status) => {
       if (status === "SUBSCRIBED") {
         setRealtimeReady(true);
+        if (typeof onChange === "function") {
+          onChange();
+        }
       }
     });
 
