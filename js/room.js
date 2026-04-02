@@ -39,7 +39,6 @@ export async function setRoomOwner(roomCode, participantId) {
 export async function startWork(participantId, roomCode) {
   const client = getSupabaseClient();
 
-  // 🔍 prüfen wer arbeitet
   const { data: currentWorkers, error: readError } = await client
     .from(TABLES.participants)
     .select("id")
@@ -51,12 +50,10 @@ export async function startWork(participantId, roomCode) {
   const someoneWorking = currentWorkers.length > 0;
   const iAmWorking = currentWorkers.some(p => p.id === participantId);
 
-  // ❌ Blockieren wenn anderer arbeitet
   if (someoneWorking && !iAmWorking && participantId) {
     throw new Error("Jemand arbeitet bereits");
   }
 
-  // 🔄 alle zurücksetzen
   const { error: resetError } = await client
     .from(TABLES.participants)
     .update({ working: false })
@@ -64,10 +61,8 @@ export async function startWork(participantId, roomCode) {
 
   if (resetError) throw resetError;
 
-  // ❌ STOP FALL
   if (!participantId) return;
 
-  // ✅ mich setzen
   const { error: setError } = await client
     .from(TABLES.participants)
     .update({ working: true })
@@ -276,17 +271,21 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
     .subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
         setRealtimeReady(true);
-        await loadParticipants(roomCode);
-        if (typeof onChange === "function") {
-          onChange();
-        }
+
+        // 🔥 FIX: kleiner Delay gegen Timing-Bug
+        setTimeout(async () => {
+          await loadParticipants(roomCode);
+          if (typeof onChange === "function") {
+            onChange();
+          }
+        }, 100);
       }
     });
 
   setParticipantsChannel(channel);
 }
 
-// 🚀 JOIN FLOW
+// 🚀 JOIN FLOW (FIXED)
 export async function joinPreparedRoom({
   roomCode,
   name,
@@ -295,7 +294,7 @@ export async function joinPreparedRoom({
 }) {
   setCurrentRoom(roomCode);
 
-  const room = await createOrJoinRoom(roomCode, name, roomType);
+  let room = await findRoomByCode(roomCode);
 
   const participant = await addParticipantToRoom({
     roomCode,
@@ -305,9 +304,16 @@ export async function joinPreparedRoom({
     mic: presence.mic,
   });
 
+  // 🔥 WICHTIG: Owner NACH Participant setzen + neu laden
+  if (!room) {
+    room = await createRoomInDb(roomCode, name, roomType);
+  }
+
   if (!room.owner_id && participant?.id) {
     await setRoomOwner(roomCode, participant.id);
-    room.owner_id = participant.id;
+
+    // 🔥 FIX: Raum neu laden
+    room = await findRoomByCode(roomCode);
   }
 
   await loadParticipants(roomCode);
