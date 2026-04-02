@@ -1,8 +1,10 @@
 export const state = {
   appReady: false,
+  realtimeReady: false,
 
   currentUser: {
     name: "",
+    participantId: null,
   },
 
   currentRoom: null,
@@ -14,10 +16,18 @@ export const state = {
   },
 
   participants: [],
+
+  channels: {
+    participants: null,
+  },
 };
 
 export function setUserName(name) {
   state.currentUser.name = String(name || "").trim();
+}
+
+export function setParticipantId(id) {
+  state.currentUser.participantId = id || null;
 }
 
 export function setCurrentRoom(roomCode) {
@@ -35,4 +45,12 @@ export function setParticipants(participants = []) {
 
 export function setAppReady(value) {
   state.appReady = Boolean(value);
+}
+
+export function setRealtimeReady(value) {
+  state.realtimeReady = Boolean(value);
+}
+
+export function setParticipantsChannel(channel) {
+  state.channels.participants = channel || null;
 }
