@@ -54,10 +54,6 @@ export function setChatMessages(messages = []) {
   state.chatMessages = Array.isArray(messages) ? messages : [];
 }
 
-export function addChatMessage(message) {
-  state.chatMessages.push(message);
-}
-
 export function setAppReady(value) {
   state.appReady = Boolean(value);
 }
