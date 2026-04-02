@@ -35,14 +35,22 @@ export async function setRoomOwner(roomCode, participantId) {
   if (error) throw error;
 }
 
-// 🔥 FIX FINAL
+// 🔥 FINAL KORRIGIERT
 export async function startWork(participantId, roomCode) {
   const client = getSupabaseClient();
 
- // 🔓 STOP (JETZT SAUBER)
-if (!participantId) {
-  throw new Error("Stop benötigt participantId");
-}
+  // 🔓 STOP (nur mich!)
+  if (!participantId) {
+    const myId = state.currentUser.participantId;
+
+    const { error } = await client
+      .from(TABLES.participants)
+      .update({ working: false })
+      .eq("id", myId);
+
+    if (error) throw error;
+    return;
+  }
 
   // 🔍 prüfen wer arbeitet
   const { data: currentWorkers, error: readError } = await client
@@ -61,20 +69,15 @@ if (!participantId) {
     throw new Error("Jemand arbeitet bereits");
   }
 
- // 🔄 reset NUR mich (wichtig!)
-const { error: resetError } = await client
-  .from(TABLES.participants)
-  .update({ working: false })
-  .eq("id", participantId);
-
-if (resetError) throw resetError;
-
-// 🔚 STOP → fertig
-return;
+  // 🔄 alle zurücksetzen
+  const { error: resetError } = await client
+    .from(TABLES.participants)
+    .update({ working: false })
+    .eq("room_code", roomCode);
 
   if (resetError) throw resetError;
 
-  // ✅ setzen
+  // ✅ mich setzen
   const { error: setError } = await client
     .from(TABLES.participants)
     .update({ working: true })
