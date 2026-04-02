@@ -22,6 +22,7 @@ import {
   loadParticipants,
   subscribeParticipantsRealtime,
   updateCurrentParticipantPresence,
+  startWork // 🔥 NEU
 } from "./room.js";
 import { bindChatEvents, initChatForRoom } from "./chat.js";
 
@@ -87,7 +88,11 @@ function renderParticipants() {
       const visual = participant.visual ? "Visuell an" : "Visuell aus";
       const speaker = participant.speaker ? "Lautsprecher an" : "Lautsprecher aus";
       const mic = participant.mic ? "Mikro an" : "Mikro aus";
-      const working = participant.working ? "Arbeitet gerade" : "Beobachtet";
+
+      // 🔥 HIER WIRD ANGEZEIGT WER ARBEITET
+      const working = participant.working
+        ? "🔥 Arbeitet gerade"
+        : "Beobachtet";
 
       return `
         <div class="participant-card">
@@ -126,6 +131,28 @@ function seedLocalParticipantPreview() {
   renderParticipants();
 }
 
+// 🔥 NEU – ARBEIT STARTEN BUTTON
+async function handleStartWork() {
+  const participantId = state.currentUser.participantId;
+
+  if (!participantId || !state.currentRoom) {
+    setStatus(dom.statusBox, "Noch nicht im Raum", true);
+    return;
+  }
+
+  try {
+    await startWork(participantId, state.currentRoom);
+
+    setStatus(dom.statusBox, "Du arbeitest jetzt 🔥");
+
+    await loadParticipants(state.currentRoom);
+    renderParticipants();
+  } catch (error) {
+    console.error(error);
+    setStatus(dom.statusBox, "Fehler beim Starten der Arbeit", true);
+  }
+}
+
 async function connectToRoom(roomCode, name, mode = "join") {
   try {
     const selectedRoomType = getSelectedRoomType();
@@ -143,7 +170,6 @@ async function connectToRoom(roomCode, name, mode = "join") {
       roomType: selectedRoomType,
     });
 
-    // 🔥 OWNER ERKENNEN
     const room = result.room;
     const participant = result.participant;
 
@@ -154,7 +180,6 @@ async function connectToRoom(roomCode, name, mode = "join") {
     console.log("🙋 Ich:", participant.id);
     console.log("✅ Bin ich Owner?", isOwner);
 
-    // 🔥 OWNER UI STEUERN (NEU)
     const ownerBox = document.getElementById("ownerControls");
     if (ownerBox) {
       ownerBox.style.display = isOwner ? "block" : "none";
@@ -278,6 +303,9 @@ async function handleTogglePresence(type) {
 function bindEvents() {
   dom.createRoomBtn?.addEventListener("click", handleCreateRoom);
   dom.joinRoomBtn?.addEventListener("click", handleJoinRoom);
+
+  // 🔥 NEU
+  document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
 
   dom.toggleVisualBtn?.addEventListener("click", () => handleTogglePresence("visual"));
   dom.toggleSpeakerBtn?.addEventListener("click", () => handleTogglePresence("speaker"));
