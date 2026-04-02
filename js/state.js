@@ -8,6 +8,7 @@ export const state = {
   },
 
   currentRoom: null,
+  currentRoomType: "business",
 
   presence: {
     visual: false,
@@ -34,6 +35,10 @@ export function setParticipantId(id) {
 
 export function setCurrentRoom(roomCode) {
   state.currentRoom = roomCode ? String(roomCode).trim() : null;
+}
+
+export function setCurrentRoomType(roomType) {
+  state.currentRoomType = roomType || "business";
 }
 
 export function togglePresence(key) {
