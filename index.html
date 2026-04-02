@@ -34,39 +34,25 @@
 
         <label class="field">
           <span>Dein Name</span>
-          <input
-            type="text"
-            id="nameInput"
-            placeholder="z. B. Christian"
-            autocomplete="name"
-          />
+          <input id="nameInput" type="text" placeholder="z. B. Christian" />
         </label>
 
         <label class="field">
           <span>Raumcode</span>
-          <input
-            type="text"
-            id="roomInput"
-            placeholder="z. B. TP-4821"
-            autocomplete="off"
-          />
+          <input id="roomInput" type="text" placeholder="z. B. TP-4821" />
         </label>
-
+        
         <label class="field">
-          <span>Bereich</span>
-          <select id="roomTypeSelect" class="select-field">
-            <option value="business">Geschäftlich</option>
-            <option value="creative">Kreativ</option>
-          </select>
+         <span>Bereich</span>
+         <select id="roomTypeSelect" class="select-field">
+           <option value="business">Geschäftlich</option>
+           <option value="creative">Kreativ</option>
+         </select>
         </label>
 
         <div class="button-group">
-          <button id="createRoomBtn" class="btn btn-primary" type="button">
-            Raum erstellen
-          </button>
-          <button id="joinRoomBtn" class="btn btn-secondary" type="button">
-            Raum beitreten
-          </button>
+          <button id="createRoomBtn" class="btn btn-primary">Raum erstellen</button>
+          <button id="joinRoomBtn" class="btn btn-secondary">Raum beitreten</button>
         </div>
 
         <div class="status-box" id="statusBox">
@@ -79,17 +65,15 @@
 
         <div class="presence-grid">
           <div class="presence-item">
-            <span class="presence-label">Visuell verbunden</span>
+            <span>Visuell verbunden</span>
             <span id="visualStatus" class="presence-badge offline">Aus</span>
           </div>
-
           <div class="presence-item">
-            <span class="presence-label">Lautsprecher</span>
+            <span>Lautsprecher</span>
             <span id="speakerStatus" class="presence-badge offline">Aus</span>
           </div>
-
           <div class="presence-item">
-            <span class="presence-label">Mikrofon</span>
+            <span>Mikrofon</span>
             <span id="micStatus" class="presence-badge offline">Aus</span>
           </div>
         </div>
@@ -114,22 +98,22 @@
 
           <div class="room-meta">
             <div class="meta-chip">
-              <span class="meta-label">Aktueller Raum</span>
+              <span>Aktueller Raum</span>
               <strong id="currentRoomLabel">–</strong>
             </div>
 
             <div class="meta-chip">
-              <span class="meta-label">Arbeitsstatus</span>
+              <span>Arbeitsstatus</span>
               <strong id="workStatusLabel">Niemand arbeitet</strong>
             </div>
           </div>
         </div>
 
-        <!-- 👑 OWNER CONTROLS (STANDARD AUS) -->
+        <!-- 👑 OWNER CONTROL (START AUS) -->
         <div id="ownerControls" style="display:none; margin-bottom:15px;">
           <div style="background:#fff3e6; padding:10px; border-radius:10px; border:1px solid #ff6a00;">
             <strong>👑 Raumkontrolle</strong>
-            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <div style="margin-top:8px; display:flex; gap:8px;">
               <button id="forceWorkBtn" class="btn btn-primary">Arbeit erzwingen</button>
               <button id="releaseWorkBtn" class="btn btn-secondary">Freigeben</button>
               <button id="removeUserBtn" class="btn btn-light">Teilnehmer entfernen</button>
@@ -137,64 +121,38 @@
           </div>
         </div>
 
-        <!-- 🔥 ARBEITS BUTTON (STANDARD AUS) -->
-        <div id="workButtonWrapper" style="display:none; margin-bottom:15px;">
+        <!-- 🔥 WORK BUTTON (START AUS!) -->
+        <div id="workButtonContainer" style="display:none; margin-bottom:15px;">
           <button id="startWorkBtn" class="btn btn-primary">
             🔥 Ich arbeite jetzt
           </button>
         </div>
 
-        <div class="table-stage" id="tableStage">
+        <div class="table-stage">
           <div class="table-placeholder">
             <div class="table-placeholder-icon">TP</div>
             <h3>Der Tisch ist bereit</h3>
-            <p>
-              Im nächsten Schritt kommen Raumlogik, Teilnehmer, Chat,
-              Dateiablage und Bildschirmfreigaben dazu.
-            </p>
           </div>
         </div>
       </section>
 
       <section class="bottom-grid">
-        <section class="panel participants-panel">
-          <div class="panel-header">
-            <h2>Teilnehmer</h2>
-            <span id="participantCountBadge" class="small-badge">0</span>
-          </div>
-
-          <div id="participantsList" class="participants-list">
-            <div class="empty-state">
-              Noch keine Teilnehmer geladen.
-            </div>
-          </div>
+        <section class="panel">
+          <h2>Teilnehmer</h2>
+          <span id="participantCountBadge">0</span>
+          <div id="participantsList"></div>
         </section>
 
-        <section class="panel chat-panel">
-          <div class="panel-header">
-            <h2>Chat</h2>
-            <span class="small-badge">Vorbereitung</span>
-          </div>
-
-          <div id="chatMessages" class="chat-messages">
-            <div class="empty-state">
-              Der Chat wird im nächsten Schritt aktiviert.
-            </div>
-          </div>
-
-          <div class="chat-input-row">
-            <input type="text" id="chatInput" disabled />
-            <button id="sendChatBtn" class="btn btn-primary" disabled>
-              Senden
-            </button>
-          </div>
+        <section class="panel">
+          <h2>Chat</h2>
+          <div id="chatMessages"></div>
+          <input id="chatInput" disabled />
+          <button id="sendChatBtn" disabled>Senden</button>
         </section>
       </section>
     </main>
   </div>
 
 <script type="module" src="./js/main.js?v=6"></script>
-</body>
-</html>s?v=5"></script>
 </body>
 </html>
