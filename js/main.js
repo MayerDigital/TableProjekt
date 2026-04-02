@@ -30,9 +30,8 @@ function getSelectedRoomType() {
 }
 
 function syncRoomTypeSelect() {
-  if (dom.roomTypeSelect) {
-    dom.roomTypeSelect.value = state.currentRoomType || DEFAULTS.roomType;
-  }
+  if (!dom.roomTypeSelect) return;
+  dom.roomTypeSelect.value = state.currentRoomType || DEFAULTS.roomType;
 }
 
 function updatePresenceBadge(element, isActive) {
@@ -51,7 +50,7 @@ function renderPresence() {
 
 function renderRoomInfo() {
   const roomTypeLabel =
-    ROOM_TYPES?.[state.currentRoomType] || ROOM_TYPES?.business || "Bereich";
+    ROOM_TYPES[state.currentRoomType] || ROOM_TYPES[DEFAULTS.roomType] || "Bereich";
 
   setText(
     dom.currentRoomLabel,
@@ -137,20 +136,23 @@ async function connectToRoom(roomCode, name, mode = "join") {
     setCurrentRoomType(selectedRoomType);
     renderRoomInfo();
 
-    await joinPreparedRoom({
+    const result = await joinPreparedRoom({
       roomCode,
       name,
       presence: state.presence,
       roomType: selectedRoomType,
     });
 
+    const actualRoomType =
+      result?.room?.room_type || selectedRoomType || DEFAULTS.roomType;
+
+    setCurrentRoomType(actualRoomType);
     syncRoomTypeSelect();
 
     await loadParticipants(roomCode);
     renderParticipants();
 
-    subscribeParticipantsRealtime(roomCode, async () => {
-      await loadParticipants(roomCode);
+    subscribeParticipantsRealtime(roomCode, () => {
       renderRoomInfo();
       renderParticipants();
     });
@@ -161,7 +163,7 @@ async function connectToRoom(roomCode, name, mode = "join") {
     renderParticipants();
 
     const roomTypeLabel =
-      ROOM_TYPES?.[state.currentRoomType] || ROOM_TYPES?.business || "Bereich";
+      ROOM_TYPES[state.currentRoomType] || ROOM_TYPES[DEFAULTS.roomType] || "Bereich";
 
     const actionText =
       mode === "create"
@@ -181,6 +183,7 @@ async function connectToRoom(roomCode, name, mode = "join") {
 
 function handleCreateRoom() {
   const name = dom.nameInput?.value?.trim() || "";
+
   if (!name) {
     setStatus(dom.statusBox, "Bitte zuerst deinen Namen eingeben.", true);
     dom.nameInput?.focus();
