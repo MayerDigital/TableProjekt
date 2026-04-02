@@ -22,6 +22,11 @@ import {
   subscribeParticipantsRealtime,
   updateCurrentParticipantPresence,
 } from "./room.js";
+import {
+  loadChatMessages,
+  sendChatMessage,
+  subscribeChatRealtime,
+} from "./chat.js";
 
 function updatePresenceBadge(element, isActive) {
   if (!element) return;
@@ -87,6 +92,79 @@ function renderParticipants() {
     .join("");
 }
 
+function formatChatTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function scrollChatToBottom() {
+  if (!dom.chatMessages) return;
+  dom.chatMessages.scrollTop = dom.chatMessages.scrollHeight;
+}
+
+function renderChatMessages() {
+  if (!dom.chatMessages) return;
+
+  if (!state.currentRoom) {
+    dom.chatMessages.innerHTML = `
+      <div class="empty-state">
+        Bitte zuerst einen Raum erstellen oder beitreten.
+      </div>
+    `;
+    return;
+  }
+
+  if (!state.chatMessages.length) {
+    dom.chatMessages.innerHTML = `
+      <div class="empty-state">
+        Noch keine Nachrichten in diesem Raum.
+      </div>
+    `;
+    return;
+  }
+
+  dom.chatMessages.innerHTML = state.chatMessages
+    .map((message) => {
+      const sender = escapeHtml(message.sender || "Unbekannt");
+      const text = escapeHtml(message.message || "");
+      const time = formatChatTime(message.created_at);
+      const ownClass =
+        message.sender === state.currentUser.name ? " own-message" : "";
+
+      return `
+        <div class="chat-message${ownClass}">
+          <div class="chat-message-head">
+            <strong>${sender}</strong>
+            <span>${time}</span>
+          </div>
+          <div class="chat-message-text">${text}</div>
+        </div>
+      `;
+    })
+    .join("");
+
+  scrollChatToBottom();
+}
+
+function updateChatAvailability() {
+  const enabled = Boolean(state.currentRoom);
+
+  if (dom.chatInput) {
+    dom.chatInput.disabled = !enabled;
+  }
+
+  if (dom.sendChatBtn) {
+    dom.sendChatBtn.disabled = !enabled;
+  }
+}
+
 function seedLocalParticipantPreview() {
   if (!state.currentUser.name) {
     setParticipants([]);
@@ -114,6 +192,8 @@ async function connectToRoom(roomCode, name, mode = "join") {
     setUserName(name);
     setCurrentRoom(roomCode);
     renderRoomInfo();
+    updateChatAvailability();
+    renderChatMessages();
 
     await joinPreparedRoom({
       roomCode,
@@ -129,8 +209,17 @@ async function connectToRoom(roomCode, name, mode = "join") {
       renderParticipants();
     });
 
+    await loadChatMessages(roomCode);
+    renderChatMessages();
+
+    subscribeChatRealtime(roomCode, () => {
+      renderChatMessages();
+    });
+
     renderRoomInfo();
     renderParticipants();
+    renderChatMessages();
+    updateChatAvailability();
 
     const actionText =
       mode === "create"
@@ -223,6 +312,39 @@ async function handleTogglePresence(type) {
   }
 }
 
+async function handleSendChatMessage() {
+  const text = dom.chatInput?.value?.trim() || "";
+
+  if (!state.currentRoom) {
+    setStatus(dom.statusBox, "Bitte zuerst einem Raum beitreten.", true);
+    return;
+  }
+
+  if (!text) {
+    setStatus(dom.statusBox, "Bitte eine Nachricht eingeben.", true);
+    dom.chatInput?.focus();
+    return;
+  }
+
+  try {
+    await sendChatMessage(text);
+
+    if (dom.chatInput) {
+      dom.chatInput.value = "";
+      dom.chatInput.focus();
+    }
+
+    setStatus(dom.statusBox, "Nachricht gesendet.");
+  } catch (error) {
+    console.error(error);
+    setStatus(
+      dom.statusBox,
+      `Chat-Fehler: ${error.message || "Nachricht konnte nicht gesendet werden."}`,
+      true
+    );
+  }
+}
+
 function bindEvents() {
   dom.createRoomBtn?.addEventListener("click", handleCreateRoom);
   dom.joinRoomBtn?.addEventListener("click", handleJoinRoom);
@@ -230,6 +352,15 @@ function bindEvents() {
   dom.toggleVisualBtn?.addEventListener("click", () => handleTogglePresence("visual"));
   dom.toggleSpeakerBtn?.addEventListener("click", () => handleTogglePresence("speaker"));
   dom.toggleMicBtn?.addEventListener("click", () => handleTogglePresence("mic"));
+
+  dom.sendChatBtn?.addEventListener("click", handleSendChatMessage);
+
+  dom.chatInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleSendChatMessage();
+    }
+  });
 
   dom.nameInput?.addEventListener("input", (event) => {
     setUserName(event.target.value);
@@ -266,6 +397,8 @@ function init() {
   renderPresence();
   renderRoomInfo();
   renderParticipants();
+  renderChatMessages();
+  updateChatAvailability();
 
   const supabaseReady = initSupabaseCheck();
 
