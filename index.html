@@ -131,23 +131,17 @@
           </div>
         </div>
 
-        <!-- 🔥 OWNER CONTROL -->
-        <div id="ownerControls" style="display:none; margin-bottom:15px;">
-          <div style="background:#fff3e6; padding:10px; border-radius:10px; border:1px solid #ff6a00;">
-            <strong>👑 Raumkontrolle</strong>
-            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-              <button id="forceWorkBtn" class="btn btn-primary">Arbeit erzwingen</button>
-              <button id="releaseWorkBtn" class="btn btn-secondary">Freigeben</button>
-              <button id="removeUserBtn" class="btn btn-light">Teilnehmer entfernen</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 🔥 NEU: ARBEITS BUTTON -->
-        <div style="margin-bottom:15px;">
+        <!-- 🔥 NEUE SAUBERE ZEILE -->
+        <div id="workRow" style="display:none; margin-bottom:15px; display:flex; gap:10px; align-items:center;">
+          
           <button id="startWorkBtn" class="btn btn-primary">
             🔥 Ich arbeite jetzt
           </button>
+
+          <button id="removeUserBtn" class="btn btn-light">
+            ❌ Teilnehmer entfernen
+          </button>
+
         </div>
 
         <div class="table-stage" id="tableStage">
@@ -204,6 +198,6 @@
     </main>
   </div>
   
-<script type="module" src="./js/main.js?v=6"></script>
+<script type="module" src="./js/main.js?v=7"></script>
 </body>
 </html>
