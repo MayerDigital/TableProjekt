@@ -363,7 +363,28 @@ function bindEvents() {
   dom.joinRoomBtn?.addEventListener("click", handleJoinRoom);
 
   document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
+document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
+  const others = state.participants.filter(p => p.id !== state.currentUser.participantId);
 
+  if (others.length === 0) {
+    setStatus(dom.statusBox, "Kein Teilnehmer vorhanden");
+    return;
+  }
+
+  const target = others[0];
+
+  try {
+    await removeParticipant(target.id);
+    setStatus(dom.statusBox, `${target.name} entfernt`);
+
+    const fresh = await loadParticipants(state.currentRoom);
+    setParticipants(fresh);
+    renderParticipants();
+  } catch (e) {
+    console.error(e);
+    setStatus(dom.statusBox, "Fehler beim Entfernen", true);
+  }
+});
   dom.toggleVisualBtn?.addEventListener("click", () => handleTogglePresence("visual"));
   dom.toggleSpeakerBtn?.addEventListener("click", () => handleTogglePresence("speaker"));
   dom.toggleMicBtn?.addEventListener("click", () => handleTogglePresence("mic"));
