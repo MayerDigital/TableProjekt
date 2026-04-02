@@ -256,21 +256,25 @@ async function connectToRoom(roomCode, name, mode = "join") {
     await loadParticipants(roomCode);
     renderParticipants();
 
- subscribeParticipantsRealtime(roomCode, async () => {
-  renderRoomInfo();
-  renderParticipants();
+subscribeParticipantsRealtime(roomCode, async () => {
 
   const myId = state.currentUser.participantId;
 
+  // 🔥 IMMER frisch aus DB laden
+  const fresh = await loadParticipants(roomCode);
+  setParticipants(fresh);
+  renderParticipants();
+
   if (!myId) return;
 
-  // 🔥 DIREKT DB prüfen (wichtig!)
-  const stillExists = state.participants.some(p => p.id === myId);
+  // 🔥 DIREKTE EXISTENZPRÜFUNG
+  const stillExists = fresh.some(p => p.id === myId);
 
   if (!stillExists) {
-    setStatus(dom.statusBox, "❌ Du wurdest aus dem Raum entfernt", true);
+    setStatus(dom.statusBox, "❌ Du wurdest entfernt", true);
 
-    // kompletter Reset
+    localStorage.removeItem("participantId");
+
     state.currentUser.participantId = null;
     setCurrentRoom(null);
     setParticipants([]);
