@@ -39,18 +39,21 @@ export async function setRoomOwner(roomCode, participantId) {
 export async function startWork(participantId, roomCode) {
   const client = getSupabaseClient();
 
-  // 🔓 STOP (nur mich!)
-  if (!participantId) {
-    const myId = state.currentUser.participantId;
+  // 🔄 ALLE FREIGEBEN
+  await client
+    .from(TABLES.participants)
+    .update({ working: false })
+    .eq("room_code", roomCode);
 
-    const { error } = await client
-      .from(TABLES.participants)
-      .update({ working: false })
-      .eq("id", myId);
+  // ❌ STOP FALL
+  if (!participantId) return;
 
-    if (error) throw error;
-    return;
-  }
+  // ✅ NUR EINEN AKTIVIEREN
+  await client
+    .from(TABLES.participants)
+    .update({ working: true })
+    .eq("id", participantId);
+}
 
   // 🔍 prüfen wer arbeitet
   const { data: currentWorkers, error: readError } = await client
