@@ -1,23 +1,38 @@
-export let currentRoom = null;
-export let currentRoomOwner = null;
-export let currentParticipantName = null;
-export let currentParticipantStatus = null;
+export const state = {
+  appReady: false,
 
-export let currentRole = "participant";
+  currentUser: {
+    name: "",
+  },
 
-export let currentExpertInviteToken = null;
-export let currentExpertInviteLink = "";
-export let currentExpertSession = null;
+  currentRoom: null,
 
-export let localSharedScreens = {};
-export let remoteScreenStreams = {};
+  presence: {
+    visual: false,
+    speaker: false,
+    mic: false,
+  },
 
-export let peerConnections = {};
-export let handledSignalIds = new Set();
+  participants: [],
+};
 
-export let screenSlots = [
-  { title: "Hauptscreen", owner: null, stream: null, active: false },
-  { title: "Screen 2", owner: null, stream: null, active: false },
-  { title: "Screen 3", owner: null, stream: null, active: false },
-  { title: "Screen 4", owner: null, stream: null, active: false }
-];
+export function setUserName(name) {
+  state.currentUser.name = String(name || "").trim();
+}
+
+export function setCurrentRoom(roomCode) {
+  state.currentRoom = roomCode ? String(roomCode).trim() : null;
+}
+
+export function togglePresence(key) {
+  if (!(key in state.presence)) return;
+  state.presence[key] = !state.presence[key];
+}
+
+export function setParticipants(participants = []) {
+  state.participants = Array.isArray(participants) ? participants : [];
+}
+
+export function setAppReady(value) {
+  state.appReady = Boolean(value);
+}
