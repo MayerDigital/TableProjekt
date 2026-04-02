@@ -178,10 +178,12 @@ export async function addParticipantToRoom({
   if (error) throw error;
 
   const participant = data || null;
+if (participant?.id) {
+  setParticipantId(participant.id);
 
-  if (participant?.id) {
-    setParticipantId(participant.id);
-  }
+  // 🔥 NEU: speichern im Browser
+  localStorage.setItem("participantId", participant.id);
+}
 
   return participant;
 }
