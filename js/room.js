@@ -22,7 +22,7 @@ function normalizeParticipantRow(row) {
   };
 }
 
-export async function createRoomInDb(roomCode, ownerName) {
+export async function createRoomInDb(roomCode, ownerName, roomType = "business") {
   const client = getSupabaseClient();
 
   const { data, error } = await client
@@ -31,6 +31,7 @@ export async function createRoomInDb(roomCode, ownerName) {
       {
         code: roomCode,
         owner: ownerName,
+        room_type: roomType,
       },
     ])
     .select();
@@ -54,12 +55,12 @@ export async function findRoomByCode(roomCode) {
   return data || null;
 }
 
-export async function createOrJoinRoom(roomCode, ownerName) {
+export async function createOrJoinRoom(roomCode, ownerName, roomType = "business") {
   const existingRoom = await findRoomByCode(roomCode);
 
   if (existingRoom) return existingRoom;
 
-  return await createRoomInDb(roomCode, ownerName);
+  return await createRoomInDb(roomCode, ownerName, roomType);
 }
 
 export async function addParticipantToRoom({
@@ -161,27 +162,23 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
       },
       async () => {
         await loadParticipants(roomCode);
-        if (typeof onChange === "function") {
-          onChange();
-        }
+        if (typeof onChange === "function") onChange();
       }
     )
     .subscribe((status) => {
       if (status === "SUBSCRIBED") {
         setRealtimeReady(true);
-        if (typeof onChange === "function") {
-          onChange();
-        }
+        if (typeof onChange === "function") onChange();
       }
     });
 
   setParticipantsChannel(channel);
 }
 
-export async function joinPreparedRoom({ roomCode, name, presence }) {
+export async function joinPreparedRoom({ roomCode, name, presence, roomType }) {
   setCurrentRoom(roomCode);
 
-  await createOrJoinRoom(roomCode, name);
+  await createOrJoinRoom(roomCode, name, roomType);
 
   const participant = await addParticipantToRoom({
     roomCode,
