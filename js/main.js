@@ -15,6 +15,13 @@ import {
   createRoomCode,
   escapeHtml,
 } from "./utils.js";
+import { getSupabaseClient } from "./supabase.js";
+import {
+  joinPreparedRoom,
+  loadParticipants,
+  subscribeParticipantsRealtime,
+  updateCurrentParticipantPresence,
+} from "./room.js";
 
 function updatePresenceBadge(element, isActive) {
   if (!element) return;
@@ -34,7 +41,11 @@ function renderRoomInfo() {
   setText(dom.currentRoomLabel, state.currentRoom || "–");
   setText(
     dom.workStatusLabel,
-    state.currentRoom ? "Raum vorbereitet" : "Niemand arbeitet"
+    state.currentRoom
+      ? state.realtimeReady
+        ? "Raum live verbunden"
+        : "Raum vorbereitet"
+      : "Niemand arbeitet"
   );
 }
 
@@ -58,6 +69,7 @@ function renderParticipants() {
       const visual = participant.visual ? "Visuell an" : "Visuell aus";
       const speaker = participant.speaker ? "Lautsprecher an" : "Lautsprecher aus";
       const mic = participant.mic ? "Mikro an" : "Mikro aus";
+      const working = participant.working ? "Arbeitet gerade" : "Beobachtet";
 
       return `
         <div class="participant-card">
@@ -67,6 +79,7 @@ function renderParticipants() {
             <span>${visual}</span>
             <span>${speaker}</span>
             <span>${mic}</span>
+            <span>${working}</span>
           </div>
         </div>
       `;
@@ -88,10 +101,51 @@ function seedLocalParticipantPreview() {
       visual: state.presence.visual,
       speaker: state.presence.speaker,
       mic: state.presence.mic,
+      working: false,
     },
   ]);
 
   renderParticipants();
+}
+
+async function connectToRoom(roomCode, name, mode = "join") {
+  try {
+    setStatus(dom.statusBox, "Verbinde mit Supabase …");
+    setUserName(name);
+    setCurrentRoom(roomCode);
+    renderRoomInfo();
+
+    await joinPreparedRoom({
+      roomCode,
+      name,
+      presence: state.presence,
+    });
+
+    await loadParticipants(roomCode);
+    renderParticipants();
+
+    subscribeParticipantsRealtime(roomCode, () => {
+      renderRoomInfo();
+      renderParticipants();
+    });
+
+    renderRoomInfo();
+    renderParticipants();
+
+    const actionText =
+      mode === "create"
+        ? `Raum ${roomCode} wurde erstellt und live verbunden.`
+        : `Du bist dem Raum ${roomCode} live beigetreten.`;
+
+    setStatus(dom.statusBox, actionText);
+  } catch (error) {
+    console.error(error);
+    setStatus(
+      dom.statusBox,
+      `Supabase-Fehler: ${error.message || "Verbindung fehlgeschlagen."}`,
+      true
+    );
+  }
 }
 
 function handleCreateRoom() {
@@ -104,20 +158,11 @@ function handleCreateRoom() {
 
   const roomCode = createRoomCode(DEFAULTS.roomPrefix);
 
-  setUserName(name);
-  setCurrentRoom(roomCode);
-
   if (dom.roomInput) {
     dom.roomInput.value = roomCode;
   }
 
-  renderRoomInfo();
-  seedLocalParticipantPreview();
-
-  setStatus(
-    dom.statusBox,
-    `Raum ${roomCode} wurde lokal vorbereitet. Im nächsten Schritt verbinden wir ihn mit Supabase.`
-  );
+  connectToRoom(roomCode, name, "create");
 }
 
 function handleJoinRoom() {
@@ -136,35 +181,46 @@ function handleJoinRoom() {
     return;
   }
 
-  setUserName(name);
-  setCurrentRoom(roomCode);
-
   if (dom.roomInput) {
     dom.roomInput.value = roomCode;
   }
 
-  renderRoomInfo();
-  seedLocalParticipantPreview();
-
-  setStatus(
-    dom.statusBox,
-    `Beitritt zu ${roomCode} lokal vorbereitet. Im nächsten Schritt wird daraus der echte Raumzugang.`
-  );
+  connectToRoom(roomCode, name, "join");
 }
 
-function handleTogglePresence(type) {
+async function handleTogglePresence(type) {
   togglePresence(type);
   renderPresence();
-  seedLocalParticipantPreview();
 
-  const labels = {
-    visual: "Visuell verbunden",
-    speaker: "Lautsprecher",
-    mic: "Mikrofon",
-  };
+  if (!state.currentUser.participantId) {
+    seedLocalParticipantPreview();
+  }
 
-  const currentValue = state.presence[type] ? "aktiv" : "inaktiv";
-  setStatus(dom.statusBox, `${labels[type]} ist jetzt ${currentValue}.`);
+  try {
+    if (state.currentUser.participantId) {
+      await updateCurrentParticipantPresence();
+      if (state.currentRoom) {
+        await loadParticipants(state.currentRoom);
+        renderParticipants();
+      }
+    }
+
+    const labels = {
+      visual: "Visuell verbunden",
+      speaker: "Lautsprecher",
+      mic: "Mikrofon",
+    };
+
+    const currentValue = state.presence[type] ? "aktiv" : "inaktiv";
+    setStatus(dom.statusBox, `${labels[type]} ist jetzt ${currentValue}.`);
+  } catch (error) {
+    console.error(error);
+    setStatus(
+      dom.statusBox,
+      `Präsenz konnte nicht gespeichert werden: ${error.message || "Fehler"}`,
+      true
+    );
+  }
 }
 
 function bindEvents() {
@@ -177,13 +233,30 @@ function bindEvents() {
 
   dom.nameInput?.addEventListener("input", (event) => {
     setUserName(event.target.value);
-    seedLocalParticipantPreview();
+    if (!state.currentUser.participantId) {
+      seedLocalParticipantPreview();
+    }
   });
 
   dom.roomInput?.addEventListener("blur", () => {
     if (!dom.roomInput) return;
     dom.roomInput.value = normalizeRoomCode(dom.roomInput.value);
   });
+}
+
+function initSupabaseCheck() {
+  try {
+    getSupabaseClient();
+    return true;
+  } catch (error) {
+    console.error(error);
+    setStatus(
+      dom.statusBox,
+      `Supabase noch nicht bereit: ${error.message}`,
+      true
+    );
+    return false;
+  }
 }
 
 function init() {
@@ -194,9 +267,14 @@ function init() {
   renderRoomInfo();
   renderParticipants();
 
+  const supabaseReady = initSupabaseCheck();
+
   setAppReady(true);
 
-  setStatus(dom.statusBox, DEFAULTS.statusMessage);
+  if (supabaseReady) {
+    setStatus(dom.statusBox, DEFAULTS.statusMessage);
+  }
+
   console.log(`${APP_NAME} gestartet`, state);
 }
 
