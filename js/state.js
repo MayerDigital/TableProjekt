@@ -1,5 +1,12 @@
 import { DEFAULTS } from "./config.js";
 
+export const screenSlots = [
+  { owner: null, stream: null, active: false },
+  { owner: null, stream: null, active: false },
+  { owner: null, stream: null, active: false },
+  { owner: null, stream: null, active: false },
+];
+
 export const state = {
   appReady: false,
   realtimeReady: false,
@@ -21,9 +28,15 @@ export const state = {
   participants: [],
   chatMessages: [],
 
+  screens: {
+    slots: screenSlots,
+  },
+
   channels: {
     participants: null,
     chat: null,
+    screens: null,
+    work: null,
   },
 };
 
@@ -70,4 +83,20 @@ export function setParticipantsChannel(channel) {
 
 export function setChatChannel(channel) {
   state.channels.chat = channel || null;
+}
+
+export function setScreensChannel(channel) {
+  state.channels.screens = channel || null;
+}
+
+export function setWorkChannel(channel) {
+  state.channels.work = channel || null;
+}
+
+export function resetScreenSlots() {
+  screenSlots.forEach((slot) => {
+    slot.owner = null;
+    slot.stream = null;
+    slot.active = false;
+  });
 }
