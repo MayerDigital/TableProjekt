@@ -1,4 +1,4 @@
-import { TABLES } from "./config.js";
+import { TABLES, DEFAULTS } from "./config.js";
 import { getSupabaseClient } from "./supabase.js";
 import {
   state,
@@ -22,7 +22,11 @@ function normalizeParticipantRow(row) {
   };
 }
 
-export async function createRoomInDb(roomCode, ownerName, roomType = "business") {
+export async function createRoomInDb(
+  roomCode,
+  ownerName,
+  roomType = DEFAULTS.roomType
+) {
   const client = getSupabaseClient();
 
   const { data, error } = await client
@@ -34,11 +38,12 @@ export async function createRoomInDb(roomCode, ownerName, roomType = "business")
         room_type: roomType,
       },
     ])
-    .select();
+    .select()
+    .single();
 
   if (error) throw error;
 
-  return data?.[0] || null;
+  return data || null;
 }
 
 export async function findRoomByCode(roomCode) {
@@ -55,10 +60,16 @@ export async function findRoomByCode(roomCode) {
   return data || null;
 }
 
-export async function createOrJoinRoom(roomCode, ownerName, roomType = "business") {
+export async function createOrJoinRoom(
+  roomCode,
+  ownerName,
+  roomType = DEFAULTS.roomType
+) {
   const existingRoom = await findRoomByCode(roomCode);
 
-  if (existingRoom) return existingRoom;
+  if (existingRoom) {
+    return existingRoom;
+  }
 
   return await createRoomInDb(roomCode, ownerName, roomType);
 }
@@ -84,11 +95,12 @@ export async function addParticipantToRoom({
         working: false,
       },
     ])
-    .select();
+    .select()
+    .single();
 
   if (error) throw error;
 
-  const participant = data?.[0] || null;
+  const participant = data || null;
 
   if (participant?.id) {
     setParticipantId(participant.id);
@@ -111,11 +123,12 @@ export async function updateCurrentParticipantPresence() {
       mic: state.presence.mic,
     })
     .eq("id", participantId)
-    .select();
+    .select()
+    .single();
 
   if (error) throw error;
 
-  return data?.[0] || null;
+  return data || null;
 }
 
 export async function loadParticipants(roomCode) {
@@ -141,8 +154,9 @@ export function unsubscribeParticipantsRealtime() {
   if (channel) {
     client.removeChannel(channel);
     setParticipantsChannel(null);
-    setRealtimeReady(false);
   }
+
+  setRealtimeReady(false);
 }
 
 export function subscribeParticipantsRealtime(roomCode, onChange) {
@@ -162,23 +176,33 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
       },
       async () => {
         await loadParticipants(roomCode);
-        if (typeof onChange === "function") onChange();
+        if (typeof onChange === "function") {
+          onChange();
+        }
       }
     )
-    .subscribe((status) => {
+    .subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
         setRealtimeReady(true);
-        if (typeof onChange === "function") onChange();
+        await loadParticipants(roomCode);
+        if (typeof onChange === "function") {
+          onChange();
+        }
       }
     });
 
   setParticipantsChannel(channel);
 }
 
-export async function joinPreparedRoom({ roomCode, name, presence, roomType }) {
+export async function joinPreparedRoom({
+  roomCode,
+  name,
+  presence,
+  roomType = DEFAULTS.roomType,
+}) {
   setCurrentRoom(roomCode);
 
-  await createOrJoinRoom(roomCode, name, roomType);
+  const room = await createOrJoinRoom(roomCode, name, roomType);
 
   const participant = await addParticipantToRoom({
     roomCode,
@@ -190,5 +214,8 @@ export async function joinPreparedRoom({ roomCode, name, presence, roomType }) {
 
   await loadParticipants(roomCode);
 
-  return participant;
+  return {
+    room,
+    participant,
+  };
 }
