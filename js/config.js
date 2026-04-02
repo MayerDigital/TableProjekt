@@ -46,5 +46,42 @@ export const SELECTORS = {
   chatInput: "#chatInput",
   sendChatBtn: "#sendChatBtn",
   chatMessages: "#chatMessages",
+
   tableStage: "#tableStage",
+
+  // 🔥 Bildschirmfreigaben
+  screenShareSection: "#screenShareSection",
+  screenShareGrid: "#screenShareGrid",
+
+  screenSlot1: "#screenSlot1",
+  screenStatus1: "#screenStatus1",
+  screenPreview1: "#screenPreview1",
+  screenVideo1: "#screenVideo1",
+  screenPlaceholder1: "#screenPlaceholder1",
+  shareScreenBtn1: "#shareScreenBtn1",
+  stopScreenBtn1: "#stopScreenBtn1",
+
+  screenSlot2: "#screenSlot2",
+  screenStatus2: "#screenStatus2",
+  screenPreview2: "#screenPreview2",
+  screenVideo2: "#screenVideo2",
+  screenPlaceholder2: "#screenPlaceholder2",
+  shareScreenBtn2: "#shareScreenBtn2",
+  stopScreenBtn2: "#stopScreenBtn2",
+
+  screenSlot3: "#screenSlot3",
+  screenStatus3: "#screenStatus3",
+  screenPreview3: "#screenPreview3",
+  screenVideo3: "#screenVideo3",
+  screenPlaceholder3: "#screenPlaceholder3",
+  shareScreenBtn3: "#shareScreenBtn3",
+  stopScreenBtn3: "#stopScreenBtn3",
+
+  screenSlot4: "#screenSlot4",
+  screenStatus4: "#screenStatus4",
+  screenPreview4: "#screenPreview4",
+  screenVideo4: "#screenVideo4",
+  screenPlaceholder4: "#screenPlaceholder4",
+  shareScreenBtn4: "#shareScreenBtn4",
+  stopScreenBtn4: "#stopScreenBtn4",
 };
