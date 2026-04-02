@@ -22,7 +22,8 @@ import {
   loadParticipants,
   subscribeParticipantsRealtime,
   updateCurrentParticipantPresence,
-  startWork
+  startWork,
+  removeParticipant // 🔥 NEU
 } from "./room.js";
 import { bindChatEvents, initChatForRoom } from "./chat.js";
 
@@ -191,22 +192,25 @@ async function handleStartWork() {
     return;
   }
 
-  const me = state.participants.find(p => p.id === participantId);
+  const workingUser = state.participants.find(p => p.working);
 
   try {
-    if (me?.working) {
-    await startWork(null, state.currentRoom); // 🔓 FREIGEBEN
+    if (workingUser && workingUser.id === participantId) {
+      await startWork(null, state.currentRoom);
       setStatus(dom.statusBox, "Arbeit beendet");
     } else {
       await startWork(participantId, state.currentRoom);
       setStatus(dom.statusBox, "Du arbeitest jetzt");
     }
 
-    await loadParticipants(state.currentRoom);
+    // 🔥 WICHTIG – echte Daten zurückholen
+    const fresh = await loadParticipants(state.currentRoom);
+    setParticipants(fresh);
     renderParticipants();
+
   } catch (error) {
     console.error(error);
-    setStatus(dom.statusBox, "Fehler bei Arbeit", true);
+    setStatus(dom.statusBox, error.message || "Fehler bei Arbeit", true);
   }
 }
 
