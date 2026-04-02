@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>TableProject™</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div class="container">
+      <img src="logo-TableProject.png" class="logo" alt="TableProject Logo">
+
+      <h1>TableProject™</h1>
+
+      <div class="control-panel">
+        <input type="text" id="nameInput" placeholder="Dein Name">
+        <input type="text" id="roomInput" placeholder="Raumcode eingeben">
+
+        <button onclick="createRoom()">Raum erstellen</button>
+        <button onclick="joinRoom()">Raum beitreten</button>
+        <button id="workNowBtn" onclick="workNow()">Ich arbeite jetzt</button>
+        <button id="pauseWorkBtn" onclick="pauseWork()">Raum pausieren</button>
+        <button id="resumeWorkBtn" onclick="resumeWork()">Raum fortsetzen</button>
+        <button id="stopWorkBtn" onclick="stopWork()">Arbeit beenden</button>
+        <button id="leaveRoomBtn" onclick="leaveRoom()">Raum verlassen</button>
+      </div>
+
+      <p id="status"></p>
+
+      <div class="status-grid">
+        <div class="status-card" id="ownerBox"></div>
+        <div class="status-card" id="workerBox"></div>
+        <div class="status-card status-lock" id="lockBox"></div>
+      </div>
+
+      <!-- EXPERTENBEREICH -->
+      <div class="status-card" id="expertPanel" style="display:none; margin-top:16px;"></div>
+
+      <div class="participants-card" id="participantsBox"></div>
+    </div>
+
+    <div class="workspace workspace-large">
+      
+      <div class="workspace-header">
+        <div>
+          <h2>Arbeitsfläche</h2>
+          <p>Gemeinsamer Raum für Dateien, Bilder, Texte und Bildschirmfreigaben.</p>
+        </div>
+      </div>
+
+      <!-- 3 gleich große Bereiche nebeneinander -->
+      <div class="workspace-main-grid workspace-main-grid-three">
+        
+        <!-- DATEIEN -->
+        <div class="workspace-card drop-card equal-card">
+          <div class="workspace-card-header">
+            <h3>Dateien</h3>
+            <button class="workspace-action-btn" id="uploadFileBtn">+ Datei</button>
+          </div>
+          <div class="workspace-card-body drop-zone" id="filesArea">
+            <p>Noch keine Dateien im Raum</p>
+          </div>
+        </div>
+
+        <!-- BILDER -->
+        <div class="workspace-card drop-card equal-card">
+          <div class="workspace-card-header">
+            <h3>Bilder</h3>
+            <button class="workspace-action-btn" id="uploadImageBtn">+ Bild</button>
+          </div>
+          <div class="workspace-card-body drop-zone image-area" id="imagesArea">
+            <p>Noch keine Bilder im Raum</p>
+          </div>
+        </div>
+
+        <!-- TEXTE -->
+        <div class="workspace-card drop-card equal-card">
+          <div class="workspace-card-header">
+            <h3>Texte / Notizen</h3>
+            <button class="workspace-action-btn" id="addTextBtn">+ Text</button>
+          </div>
+          <div class="workspace-card-body text-area" id="textsArea">
+            <p>Noch keine Texte im Raum</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SCREEN -->
+      <div class="workspace-screen-block">
+        <div class="workspace-card">
+          <div class="workspace-card-header">
+            <h3>Bildschirmfreigaben</h3>
+            <button class="workspace-action-btn" id="shareScreenBtn">Freigeben</button>
+          </div>
+
+          <div class="screens-stage" id="screenArea">
+            <div class="primary-screen screen-active" id="primaryScreen" onclick="promoteScreen(0)">
+              <div class="screen-slot-header">Hauptscreen</div>
+              <div class="screen-slot-body" id="primaryScreenBody">
+                <p>Keine Freigabe aktiv</p>
+              </div>
+            </div>
+
+            <div class="secondary-screens">
+              <div class="screen-slot secondary-screen" id="screenThumb1" onclick="promoteScreen(1)">
+                <div class="screen-slot-header">Screen 2</div>
+                <div class="screen-slot-body" id="screenBody1">
+                  <p>Keine Freigabe aktiv</p>
+                </div>
+              </div>
+
+              <div class="screen-slot secondary-screen" id="screenThumb2" onclick="promoteScreen(2)">
+                <div class="screen-slot-header">Screen 3</div>
+                <div class="screen-slot-body" id="screenBody2">
+                  <p>Keine Freigabe aktiv</p>
+                </div>
+              </div>
+
+              <div class="screen-slot secondary-screen" id="screenThumb3" onclick="promoteScreen(3)">
+                <div class="screen-slot-header">Screen 4</div>
+                <div class="screen-slot-body" id="screenBody3">
+                  <p>Keine Freigabe aktiv</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHAT -->
+      <div class="workspace-chat-block">
+        <div class="workspace-card">
+          <div class="workspace-card-header">
+            <h3>Chat</h3>
+          </div>
+
+          <div class="chat-messages" id="chatMessages">
+            <p>Noch keine Nachrichten</p>
+          </div>
+
+          <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="Nachricht eingeben...">
+            <button onclick="sendChatMessage()">Senden</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
