@@ -14,7 +14,6 @@ export const TABLES = {
 export const ROOM_TYPES = {
   business: "Geschäftlich",
   creative: "Kreativ",
-  private: "Privat",
 };
 
 export const DEFAULTS = {
