@@ -59,6 +59,7 @@
            <option value="creative">Kreativ</option>
          </select>
         </label>
+
         <div class="button-group">
           <button id="createRoomBtn" class="btn btn-primary" type="button">
             Raum erstellen
@@ -130,6 +131,18 @@
           </div>
         </div>
 
+        <!-- 🔥 OWNER CONTROL -->
+        <div id="ownerControls" style="display:none; margin-bottom:15px;">
+          <div style="background:#fff3e6; padding:10px; border-radius:10px; border:1px solid #ff6a00;">
+            <strong>👑 Raumkontrolle</strong>
+            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+              <button id="forceWorkBtn" class="btn btn-primary">Arbeit erzwingen</button>
+              <button id="releaseWorkBtn" class="btn btn-secondary">Freigeben</button>
+              <button id="removeUserBtn" class="btn btn-light">Teilnehmer entfernen</button>
+            </div>
+          </div>
+        </div>
+
         <div class="table-stage" id="tableStage">
           <div class="table-placeholder">
             <div class="table-placeholder-icon">TP</div>
@@ -184,6 +197,6 @@
     </main>
   </div>
 
-<script type="module" src="./js/main.js?v=3"></script>
+<script type="module" src="./js/main.js?v=4"></script>
 </body>
 </html>
