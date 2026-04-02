@@ -40,17 +40,10 @@ export async function startWork(participantId, roomCode) {
   const client = getSupabaseClient();
 
   // 🔓 STOP (WICHTIGER FIX!)
-  if (!participantId) {
-    const myId = state.currentUser.participantId;
-
-    const { error } = await client
-      .from(TABLES.participants)
-      .update({ working: false })
-      .eq("id", myId);
-
-    if (error) throw error;
-    return;
-  }
+ // 🔓 STOP (JETZT SAUBER)
+if (!participantId) {
+  throw new Error("Stop benötigt participantId");
+}
 
   // 🔍 prüfen wer arbeitet
   const { data: currentWorkers, error: readError } = await client
