@@ -154,13 +154,15 @@ export async function addParticipantToRoom({
 }) {
   const client = getSupabaseClient();
 
-  const existingId = localStorage.getItem("participantId");
+  const storageKey = `participantId_${roomCode}`;
+  const existingId = localStorage.getItem(storageKey);
 
   if (existingId) {
     const { data: existing } = await client
       .from(TABLES.participants)
       .select("*")
       .eq("id", existingId)
+      .eq("room_code", roomCode)
       .maybeSingle();
 
     if (existing) {
@@ -190,7 +192,7 @@ export async function addParticipantToRoom({
 
   if (participant?.id) {
     setParticipantId(participant.id);
-    localStorage.setItem("participantId", participant.id);
+    localStorage.setItem(storageKey, participant.id);
   }
 
   return participant;
