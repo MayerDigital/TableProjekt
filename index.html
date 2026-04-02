@@ -53,11 +53,11 @@
         </label>
 
         <label class="field">
-         <span>Bereich</span>
-         <select id="roomTypeSelect" class="select-field">
-           <option value="business">Geschäftlich</option>
-           <option value="creative">Kreativ</option>
-         </select>
+          <span>Bereich</span>
+          <select id="roomTypeSelect" class="select-field">
+            <option value="business">Geschäftlich</option>
+            <option value="creative">Kreativ</option>
+          </select>
         </label>
 
         <div class="button-group">
@@ -133,17 +133,15 @@
 
         <!-- 🔥 NEUE SAUBERE ZEILE -->
         <div id="workRow" style="display:none; margin-bottom:15px; display:flex; gap:10px; align-items:center;">
-          
           <button id="startWorkBtn" class="btn btn-primary">
-          Ich arbeite jetzt
+            Ich arbeite jetzt
           </button>
           <button id="leaveRoomBtn" class="btn btn-secondary">
-          Raum verlassen
-           </button>
-          <button id="removeUserBtn" class="btn btn-light">
-          Teilnehmer entfernen
+            Raum verlassen
           </button>
-
+          <button id="removeUserBtn" class="btn btn-light">
+            Teilnehmer entfernen
+          </button>
         </div>
 
         <div class="table-stage" id="tableStage">
@@ -154,6 +152,108 @@
               Im nächsten Schritt kommen Raumlogik, Teilnehmer, Chat,
               Dateiablage und Bildschirmfreigaben dazu.
             </p>
+          </div>
+        </div>
+
+        <!-- 🔥 BILDSCHIRMFREIGABEN -->
+        <div class="screen-share-section" id="screenShareSection">
+          <div class="panel-header">
+            <h2>Bildschirmfreigaben</h2>
+            <span class="small-badge">4 Slots</span>
+          </div>
+
+          <div class="screen-share-grid" id="screenShareGrid">
+            <div class="screen-slot" id="screenSlot1">
+              <div class="screen-slot-header">
+                <strong>Bildschirm 1</strong>
+                <span id="screenStatus1" class="small-badge">Inaktiv</span>
+              </div>
+
+              <div class="screen-preview" id="screenPreview1">
+                <video id="screenVideo1" autoplay playsinline muted></video>
+                <div class="screen-placeholder" id="screenPlaceholder1">
+                  Keine Freigabe aktiv
+                </div>
+              </div>
+
+              <div class="screen-slot-actions">
+                <button id="shareScreenBtn1" class="btn btn-primary" type="button">
+                  Starten
+                </button>
+                <button id="stopScreenBtn1" class="btn btn-light" type="button">
+                  Stoppen
+                </button>
+              </div>
+            </div>
+
+            <div class="screen-slot" id="screenSlot2">
+              <div class="screen-slot-header">
+                <strong>Bildschirm 2</strong>
+                <span id="screenStatus2" class="small-badge">Inaktiv</span>
+              </div>
+
+              <div class="screen-preview" id="screenPreview2">
+                <video id="screenVideo2" autoplay playsinline muted></video>
+                <div class="screen-placeholder" id="screenPlaceholder2">
+                  Keine Freigabe aktiv
+                </div>
+              </div>
+
+              <div class="screen-slot-actions">
+                <button id="shareScreenBtn2" class="btn btn-primary" type="button">
+                  Starten
+                </button>
+                <button id="stopScreenBtn2" class="btn btn-light" type="button">
+                  Stoppen
+                </button>
+              </div>
+            </div>
+
+            <div class="screen-slot" id="screenSlot3">
+              <div class="screen-slot-header">
+                <strong>Bildschirm 3</strong>
+                <span id="screenStatus3" class="small-badge">Inaktiv</span>
+              </div>
+
+              <div class="screen-preview" id="screenPreview3">
+                <video id="screenVideo3" autoplay playsinline muted></video>
+                <div class="screen-placeholder" id="screenPlaceholder3">
+                  Keine Freigabe aktiv
+                </div>
+              </div>
+
+              <div class="screen-slot-actions">
+                <button id="shareScreenBtn3" class="btn btn-primary" type="button">
+                  Starten
+                </button>
+                <button id="stopScreenBtn3" class="btn btn-light" type="button">
+                  Stoppen
+                </button>
+              </div>
+            </div>
+
+            <div class="screen-slot" id="screenSlot4">
+              <div class="screen-slot-header">
+                <strong>Bildschirm 4</strong>
+                <span id="screenStatus4" class="small-badge">Inaktiv</span>
+              </div>
+
+              <div class="screen-preview" id="screenPreview4">
+                <video id="screenVideo4" autoplay playsinline muted></video>
+                <div class="screen-placeholder" id="screenPlaceholder4">
+                  Keine Freigabe aktiv
+                </div>
+              </div>
+
+              <div class="screen-slot-actions">
+                <button id="shareScreenBtn4" class="btn btn-primary" type="button">
+                  Starten
+                </button>
+                <button id="stopScreenBtn4" class="btn btn-light" type="button">
+                  Stoppen
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -199,7 +299,7 @@
       </section>
     </main>
   </div>
-  
-<script type="module" src="./js/main.js?v=7"></script>
+
+  <script type="module" src="./js/main.js?v=7"></script>
 </body>
 </html>
