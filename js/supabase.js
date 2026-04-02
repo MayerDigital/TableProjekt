@@ -18,6 +18,10 @@ export function getSupabaseClient() {
     throw new Error("Supabase URL oder Anon Key fehlen in js/config.js.");
   }
 
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
   return supabaseClient;
 }
