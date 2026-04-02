@@ -39,22 +39,6 @@ export async function setRoomOwner(roomCode, participantId) {
 export async function startWork(participantId, roomCode) {
   const client = getSupabaseClient();
 
-  // 🔄 ALLE FREIGEBEN
-  await client
-    .from(TABLES.participants)
-    .update({ working: false })
-    .eq("room_code", roomCode);
-
-  // ❌ STOP FALL
-  if (!participantId) return;
-
-  // ✅ NUR EINEN AKTIVIEREN
-  await client
-    .from(TABLES.participants)
-    .update({ working: true })
-    .eq("id", participantId);
-}
-
   // 🔍 prüfen wer arbeitet
   const { data: currentWorkers, error: readError } = await client
     .from(TABLES.participants)
@@ -68,7 +52,7 @@ export async function startWork(participantId, roomCode) {
   const iAmWorking = currentWorkers.some(p => p.id === participantId);
 
   // ❌ Blockieren wenn anderer arbeitet
-  if (someoneWorking && !iAmWorking) {
+  if (someoneWorking && !iAmWorking && participantId) {
     throw new Error("Jemand arbeitet bereits");
   }
 
@@ -79,6 +63,9 @@ export async function startWork(participantId, roomCode) {
     .eq("room_code", roomCode);
 
   if (resetError) throw resetError;
+
+  // ❌ STOP FALL
+  if (!participantId) return;
 
   // ✅ mich setzen
   const { error: setError } = await client
