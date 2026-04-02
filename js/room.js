@@ -7,6 +7,7 @@ import {
   setParticipants,
   setParticipantsChannel,
   setRealtimeReady,
+  setScreensChannel,
 } from "./state.js";
 
 function normalizeParticipantRow(row) {
@@ -41,30 +42,36 @@ export async function startWork(participantId, roomCode) {
 
   const { data: currentWorkers, error: readError } = await client
     .from(TABLES.participants)
-    .select("id")
+    .select("id, working")
     .eq("room_code", roomCode)
-    .eq("active", true); // 🔥 WICHTIG
+    .eq("active", true);
 
   if (readError) throw readError;
 
-  const someoneWorking = currentWorkers.some(p => p.working);
-  const iAmWorking = currentWorkers.some(p => p.id === participantId && p.working);
+  const someoneWorking = (currentWorkers || []).some((p) => p.working);
+  const iAmWorking = (currentWorkers || []).some(
+    (p) => p.id === participantId && p.working
+  );
 
   if (someoneWorking && !iAmWorking) {
     throw new Error("Jemand arbeitet bereits");
   }
 
-  await client
+  const { error: clearError } = await client
     .from(TABLES.participants)
     .update({ working: false })
     .eq("room_code", roomCode);
 
+  if (clearError) throw clearError;
+
   if (!participantId) return;
 
-  await client
+  const { error: setError } = await client
     .from(TABLES.participants)
     .update({ working: true })
     .eq("id", participantId);
+
+  if (setError) throw setError;
 }
 
 // 🔥 TEILNEHMER ENTFERNEN
@@ -169,8 +176,42 @@ export async function addParticipantToRoom({
       .maybeSingle();
 
     if (existing) {
-      setParticipantId(existing.id);
-      return existing;
+      if (!existing.active) {
+        const { data: reactivated, error: reactivateError } = await client
+          .from(TABLES.participants)
+          .update({
+            active: true,
+            name,
+            visual,
+            speaker,
+            mic,
+          })
+          .eq("id", existing.id)
+          .select()
+          .single();
+
+        if (reactivateError) throw reactivateError;
+
+        setParticipantId(reactivated.id);
+        return reactivated;
+      }
+
+      const { data: updated, error: updateError } = await client
+        .from(TABLES.participants)
+        .update({
+          name,
+          visual,
+          speaker,
+          mic,
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      setParticipantId(updated.id);
+      return updated;
     }
   }
 
@@ -184,7 +225,7 @@ export async function addParticipantToRoom({
         speaker,
         mic,
         working: false,
-        active: true, // 🔥 WICHTIG
+        active: true,
       },
     ])
     .select()
@@ -225,7 +266,7 @@ export async function updateCurrentParticipantPresence() {
   return data || null;
 }
 
-// 📡 LOAD (🔥 FIXED)
+// 📡 LOAD
 export async function loadParticipants(roomCode) {
   const client = getSupabaseClient();
 
@@ -233,7 +274,7 @@ export async function loadParticipants(roomCode) {
     .from(TABLES.participants)
     .select("*")
     .eq("room_code", roomCode)
-    .eq("active", true) // 🔥 DAS IST DER FIX
+    .eq("active", true)
     .order("joined_at", { ascending: true });
 
   if (error) throw error;
@@ -243,7 +284,7 @@ export async function loadParticipants(roomCode) {
   return rows;
 }
 
-// 🔴 REALTIME
+// 🔴 REALTIME TEILNEHMER
 export function unsubscribeParticipantsRealtime() {
   const client = getSupabaseClient();
   const channel = state.channels.participants;
@@ -274,9 +315,8 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
       async () => {
         await loadParticipants(roomCode);
 
-        // 🔥 ENTFERNT-ERKENNUNG
         const me = state.currentUser.participantId;
-        const stillExists = state.participants.find(p => p.id === me);
+        const stillExists = state.participants.find((p) => p.id === me);
 
         if (!stillExists && state.currentRoom) {
           alert("Du wurdest aus dem Raum entfernt");
@@ -304,6 +344,49 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
     });
 
   setParticipantsChannel(channel);
+}
+
+// 🖥️ REALTIME SCREENS
+export function unsubscribeScreensRealtime() {
+  const client = getSupabaseClient();
+  const channel = state.channels.screens;
+
+  if (channel) {
+    client.removeChannel(channel);
+    setScreensChannel(null);
+  }
+}
+
+export function subscribeScreensRealtime(roomCode, onChange) {
+  const client = getSupabaseClient();
+
+  unsubscribeScreensRealtime();
+
+  const channel = client
+    .channel(`screens-room-${roomCode}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: TABLES.screens,
+        filter: `room_code=eq.${roomCode}`,
+      },
+      async () => {
+        if (typeof onChange === "function") {
+          await onChange();
+        }
+      }
+    )
+    .subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        if (typeof onChange === "function") {
+          await onChange();
+        }
+      }
+    });
+
+  setScreensChannel(channel);
 }
 
 // 🚀 JOIN FLOW
