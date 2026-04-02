@@ -1,3 +1,7 @@
+const savedId = localStorage.getItem("participantId");
+if (savedId) {
+  state.currentUser.participantId = savedId;
+}
 import { APP_NAME, DEFAULTS, ROOM_TYPES } from "./config.js";
 import { dom } from "./dom.js";
 import {
