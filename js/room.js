@@ -36,9 +36,20 @@ export async function setRoomOwner(roomCode, participantId) {
   if (error) throw error;
 }
 
-// 🔥 FIX: ARBEIT STARTEN MIT SPERRE
+// 🔥 FIX: ARBEIT STARTEN + STOPPEN
 export async function startWork(participantId, roomCode) {
   const client = getSupabaseClient();
+
+  // 🔓 FALL: FREIGEBEN (participantId = null)
+  if (!participantId) {
+    const { error } = await client
+      .from(TABLES.participants)
+      .update({ working: false })
+      .eq("room_code", roomCode);
+
+    if (error) throw error;
+    return;
+  }
 
   // 🔍 prüfen ob jemand arbeitet
   const { data: currentWorkers, error: readError } = await client
@@ -57,7 +68,7 @@ export async function startWork(participantId, roomCode) {
     throw new Error("Jemand arbeitet bereits");
   }
 
-  // 🔄 alle stoppen (nur wenn ich darf)
+  // 🔄 alle stoppen
   const { error: resetError } = await client
     .from(TABLES.participants)
     .update({ working: false })
