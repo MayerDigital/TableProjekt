@@ -16,9 +16,11 @@ export const state = {
   },
 
   participants: [],
+  chatMessages: [],
 
   channels: {
     participants: null,
+    chat: null,
   },
 };
 
@@ -43,6 +45,14 @@ export function setParticipants(participants = []) {
   state.participants = Array.isArray(participants) ? participants : [];
 }
 
+export function setChatMessages(messages = []) {
+  state.chatMessages = Array.isArray(messages) ? messages : [];
+}
+
+export function addChatMessage(message) {
+  state.chatMessages.push(message);
+}
+
 export function setAppReady(value) {
   state.appReady = Boolean(value);
 }
@@ -53,4 +63,8 @@ export function setRealtimeReady(value) {
 
 export function setParticipantsChannel(channel) {
   state.channels.participants = channel || null;
+}
+
+export function setChatChannel(channel) {
+  state.channels.chat = channel || null;
 }
