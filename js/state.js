@@ -1,3 +1,5 @@
+import { DEFAULTS } from "./config.js";
+
 export const state = {
   appReady: false,
   realtimeReady: false,
@@ -8,7 +10,7 @@ export const state = {
   },
 
   currentRoom: null,
-  currentRoomType: "business",
+  currentRoomType: DEFAULTS.roomType,
 
   presence: {
     visual: false,
@@ -38,7 +40,7 @@ export function setCurrentRoom(roomCode) {
 }
 
 export function setCurrentRoomType(roomType) {
-  state.currentRoomType = roomType || "business";
+  state.currentRoomType = roomType || DEFAULTS.roomType;
 }
 
 export function togglePresence(key) {
