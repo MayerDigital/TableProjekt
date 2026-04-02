@@ -43,4 +43,40 @@ export const dom = {
 
   // Tisch
   tableStage: getElement(SELECTORS.tableStage),
+
+  // Bildschirmfreigaben
+  screenShareSection: getElement(SELECTORS.screenShareSection),
+  screenShareGrid: getElement(SELECTORS.screenShareGrid),
+
+  screenSlot1: getElement(SELECTORS.screenSlot1),
+  screenStatus1: getElement(SELECTORS.screenStatus1),
+  screenPreview1: getElement(SELECTORS.screenPreview1),
+  screenVideo1: getElement(SELECTORS.screenVideo1),
+  screenPlaceholder1: getElement(SELECTORS.screenPlaceholder1),
+  shareScreenBtn1: getElement(SELECTORS.shareScreenBtn1),
+  stopScreenBtn1: getElement(SELECTORS.stopScreenBtn1),
+
+  screenSlot2: getElement(SELECTORS.screenSlot2),
+  screenStatus2: getElement(SELECTORS.screenStatus2),
+  screenPreview2: getElement(SELECTORS.screenPreview2),
+  screenVideo2: getElement(SELECTORS.screenVideo2),
+  screenPlaceholder2: getElement(SELECTORS.screenPlaceholder2),
+  shareScreenBtn2: getElement(SELECTORS.shareScreenBtn2),
+  stopScreenBtn2: getElement(SELECTORS.stopScreenBtn2),
+
+  screenSlot3: getElement(SELECTORS.screenSlot3),
+  screenStatus3: getElement(SELECTORS.screenStatus3),
+  screenPreview3: getElement(SELECTORS.screenPreview3),
+  screenVideo3: getElement(SELECTORS.screenVideo3),
+  screenPlaceholder3: getElement(SELECTORS.screenPlaceholder3),
+  shareScreenBtn3: getElement(SELECTORS.shareScreenBtn3),
+  stopScreenBtn3: getElement(SELECTORS.stopScreenBtn3),
+
+  screenSlot4: getElement(SELECTORS.screenSlot4),
+  screenStatus4: getElement(SELECTORS.screenStatus4),
+  screenPreview4: getElement(SELECTORS.screenPreview4),
+  screenVideo4: getElement(SELECTORS.screenVideo4),
+  screenPlaceholder4: getElement(SELECTORS.screenPlaceholder4),
+  shareScreenBtn4: getElement(SELECTORS.shareScreenBtn4),
+  stopScreenBtn4: getElement(SELECTORS.stopScreenBtn4),
 };
