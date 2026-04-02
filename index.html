@@ -51,13 +51,13 @@
             autocomplete="off"
           />
         </label>
-        
+
         <label class="field">
-         <span>Bereich</span>
-         <select id="roomTypeSelect" class="select-field">
-           <option value="business">Geschäftlich</option>
-           <option value="creative">Kreativ</option>
-         </select>
+          <span>Bereich</span>
+          <select id="roomTypeSelect" class="select-field">
+            <option value="business">Geschäftlich</option>
+            <option value="creative">Kreativ</option>
+          </select>
         </label>
 
         <div class="button-group">
@@ -95,15 +95,9 @@
         </div>
 
         <div class="toggle-group">
-          <button id="toggleVisualBtn" class="btn btn-light" type="button">
-            Visuell
-          </button>
-          <button id="toggleSpeakerBtn" class="btn btn-light" type="button">
-            Lautsprecher
-          </button>
-          <button id="toggleMicBtn" class="btn btn-light" type="button">
-            Mikrofon
-          </button>
+          <button id="toggleVisualBtn" class="btn btn-light">Visuell</button>
+          <button id="toggleSpeakerBtn" class="btn btn-light">Lautsprecher</button>
+          <button id="toggleMicBtn" class="btn btn-light">Mikrofon</button>
         </div>
       </section>
     </aside>
@@ -131,7 +125,7 @@
           </div>
         </div>
 
-        <!-- 🔥 OWNER CONTROL -->
+        <!-- 👑 OWNER CONTROLS (STANDARD AUS) -->
         <div id="ownerControls" style="display:none; margin-bottom:15px;">
           <div style="background:#fff3e6; padding:10px; border-radius:10px; border:1px solid #ff6a00;">
             <strong>👑 Raumkontrolle</strong>
@@ -143,8 +137,8 @@
           </div>
         </div>
 
-        <!-- 🔥 NEU: ARBEITS BUTTON -->
-        <div style="margin-bottom:15px;">
+        <!-- 🔥 ARBEITS BUTTON (STANDARD AUS) -->
+        <div id="workButtonWrapper" style="display:none; margin-bottom:15px;">
           <button id="startWorkBtn" class="btn btn-primary">
             🔥 Ich arbeite jetzt
           </button>
@@ -189,13 +183,8 @@
           </div>
 
           <div class="chat-input-row">
-            <input
-              type="text"
-              id="chatInput"
-              placeholder="Nachricht eingeben …"
-              disabled
-            />
-            <button id="sendChatBtn" class="btn btn-primary" type="button" disabled>
+            <input type="text" id="chatInput" disabled />
+            <button id="sendChatBtn" class="btn btn-primary" disabled>
               Senden
             </button>
           </div>
@@ -204,6 +193,8 @@
     </main>
   </div>
 
-<script type="module" src="./js/main.js?v=5"></script>
+<script type="module" src="./js/main.js?v=6"></script>
+</body>
+</html>s?v=5"></script>
 </body>
 </html>
