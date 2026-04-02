@@ -1,157 +1,181 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>TableProject™</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TableProjekt™</title>
+
+  <meta name="theme-color" content="#ff6a00" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icon.png" />
+
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-
   <div class="app-shell">
-    <div class="container">
-      <img src="logo-TableProject.png" class="logo" alt="TableProject Logo">
+    <aside class="sidebar">
+      <div class="brand-card">
+        <img
+          src="./Logo-TableProject.png"
+          alt="TableProjekt Logo"
+          class="brand-logo"
+          onerror="this.src='./logo.png';"
+        />
 
-      <h1>TableProject™</h1>
-
-      <div class="control-panel">
-        <input type="text" id="nameInput" placeholder="Dein Name">
-        <input type="text" id="roomInput" placeholder="Raumcode eingeben">
-
-        <button onclick="createRoom()">Raum erstellen</button>
-        <button onclick="joinRoom()">Raum beitreten</button>
-        <button id="workNowBtn" onclick="workNow()">Ich arbeite jetzt</button>
-        <button id="pauseWorkBtn" onclick="pauseWork()">Raum pausieren</button>
-        <button id="resumeWorkBtn" onclick="resumeWork()">Raum fortsetzen</button>
-        <button id="stopWorkBtn" onclick="stopWork()">Arbeit beenden</button>
-        <button id="leaveRoomBtn" onclick="leaveRoom()">Raum verlassen</button>
+        <h1>TableProjekt™</h1>
+        <p class="brand-subtitle">
+          Der gemeinsame Projektraum für klare Zusammenarbeit.
+        </p>
       </div>
 
-      <p id="status"></p>
+      <section class="panel">
+        <h2>Verbindung</h2>
 
-      <div class="status-grid">
-        <div class="status-card" id="ownerBox"></div>
-        <div class="status-card" id="workerBox"></div>
-        <div class="status-card status-lock" id="lockBox"></div>
-      </div>
+        <label class="field">
+          <span>Dein Name</span>
+          <input
+            type="text"
+            id="nameInput"
+            placeholder="z. B. Christian"
+            autocomplete="name"
+          />
+        </label>
 
-      <!-- EXPERTENBEREICH -->
-      <div class="status-card" id="expertPanel" style="display:none; margin-top:16px;"></div>
+        <label class="field">
+          <span>Raumcode</span>
+          <input
+            type="text"
+            id="roomInput"
+            placeholder="z. B. TP-4821"
+            autocomplete="off"
+          />
+        </label>
 
-      <div class="participants-card" id="participantsBox"></div>
-    </div>
-
-    <div class="workspace workspace-large">
-      
-      <div class="workspace-header">
-        <div>
-          <h2>Arbeitsfläche</h2>
-          <p>Gemeinsamer Raum für Dateien, Bilder, Texte und Bildschirmfreigaben.</p>
-        </div>
-      </div>
-
-      <!-- 3 gleich große Bereiche nebeneinander -->
-      <div class="workspace-main-grid workspace-main-grid-three">
-        
-        <!-- DATEIEN -->
-        <div class="workspace-card drop-card equal-card">
-          <div class="workspace-card-header">
-            <h3>Dateien</h3>
-            <button class="workspace-action-btn" id="uploadFileBtn">+ Datei</button>
-          </div>
-          <div class="workspace-card-body drop-zone" id="filesArea">
-            <p>Noch keine Dateien im Raum</p>
-          </div>
+        <div class="button-group">
+          <button id="createRoomBtn" class="btn btn-primary" type="button">
+            Raum erstellen
+          </button>
+          <button id="joinRoomBtn" class="btn btn-secondary" type="button">
+            Raum beitreten
+          </button>
         </div>
 
-        <!-- BILDER -->
-        <div class="workspace-card drop-card equal-card">
-          <div class="workspace-card-header">
-            <h3>Bilder</h3>
-            <button class="workspace-action-btn" id="uploadImageBtn">+ Bild</button>
-          </div>
-          <div class="workspace-card-body drop-zone image-area" id="imagesArea">
-            <p>Noch keine Bilder im Raum</p>
-          </div>
+        <div class="status-box" id="statusBox">
+          TableProjekt wird geladen …
         </div>
+      </section>
 
-        <!-- TEXTE -->
-        <div class="workspace-card drop-card equal-card">
-          <div class="workspace-card-header">
-            <h3>Texte / Notizen</h3>
-            <button class="workspace-action-btn" id="addTextBtn">+ Text</button>
+      <section class="panel">
+        <h2>Dein Status</h2>
+
+        <div class="presence-grid">
+          <div class="presence-item">
+            <span class="presence-label">Visuell verbunden</span>
+            <span id="visualStatus" class="presence-badge offline">Aus</span>
           </div>
-          <div class="workspace-card-body text-area" id="textsArea">
-            <p>Noch keine Texte im Raum</p>
+
+          <div class="presence-item">
+            <span class="presence-label">Lautsprecher</span>
+            <span id="speakerStatus" class="presence-badge offline">Aus</span>
+          </div>
+
+          <div class="presence-item">
+            <span class="presence-label">Mikrofon</span>
+            <span id="micStatus" class="presence-badge offline">Aus</span>
           </div>
         </div>
 
-      </div>
+        <div class="toggle-group">
+          <button id="toggleVisualBtn" class="btn btn-light" type="button">
+            Visuell
+          </button>
+          <button id="toggleSpeakerBtn" class="btn btn-light" type="button">
+            Lautsprecher
+          </button>
+          <button id="toggleMicBtn" class="btn btn-light" type="button">
+            Mikrofon
+          </button>
+        </div>
+      </section>
+    </aside>
 
-      <!-- SCREEN -->
-      <div class="workspace-screen-block">
-        <div class="workspace-card">
-          <div class="workspace-card-header">
-            <h3>Bildschirmfreigaben</h3>
-            <button class="workspace-action-btn" id="shareScreenBtn">Freigeben</button>
+    <main class="main-stage">
+      <section class="panel room-panel">
+        <div class="room-header">
+          <div>
+            <h2>Projekt-Tisch</h2>
+            <p class="room-subtitle">
+              Hier entsteht später die gemeinsame Arbeitsfläche.
+            </p>
           </div>
 
-          <div class="screens-stage" id="screenArea">
-            <div class="primary-screen screen-active" id="primaryScreen" onclick="promoteScreen(0)">
-              <div class="screen-slot-header">Hauptscreen</div>
-              <div class="screen-slot-body" id="primaryScreenBody">
-                <p>Keine Freigabe aktiv</p>
-              </div>
+          <div class="room-meta">
+            <div class="meta-chip">
+              <span class="meta-label">Aktueller Raum</span>
+              <strong id="currentRoomLabel">–</strong>
             </div>
 
-            <div class="secondary-screens">
-              <div class="screen-slot secondary-screen" id="screenThumb1" onclick="promoteScreen(1)">
-                <div class="screen-slot-header">Screen 2</div>
-                <div class="screen-slot-body" id="screenBody1">
-                  <p>Keine Freigabe aktiv</p>
-                </div>
-              </div>
-
-              <div class="screen-slot secondary-screen" id="screenThumb2" onclick="promoteScreen(2)">
-                <div class="screen-slot-header">Screen 3</div>
-                <div class="screen-slot-body" id="screenBody2">
-                  <p>Keine Freigabe aktiv</p>
-                </div>
-              </div>
-
-              <div class="screen-slot secondary-screen" id="screenThumb3" onclick="promoteScreen(3)">
-                <div class="screen-slot-header">Screen 4</div>
-                <div class="screen-slot-body" id="screenBody3">
-                  <p>Keine Freigabe aktiv</p>
-                </div>
-              </div>
+            <div class="meta-chip">
+              <span class="meta-label">Arbeitsstatus</span>
+              <strong id="workStatusLabel">Niemand arbeitet</strong>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- CHAT -->
-      <div class="workspace-chat-block">
-        <div class="workspace-card">
-          <div class="workspace-card-header">
-            <h3>Chat</h3>
+        <div class="table-stage" id="tableStage">
+          <div class="table-placeholder">
+            <div class="table-placeholder-icon">TP</div>
+            <h3>Der Tisch ist bereit</h3>
+            <p>
+              Im nächsten Schritt kommen Raumlogik, Teilnehmer, Chat,
+              Dateiablage und Bildschirmfreigaben dazu.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="bottom-grid">
+        <section class="panel participants-panel">
+          <div class="panel-header">
+            <h2>Teilnehmer</h2>
+            <span id="participantCountBadge" class="small-badge">0</span>
           </div>
 
-          <div class="chat-messages" id="chatMessages">
-            <p>Noch keine Nachrichten</p>
+          <div id="participantsList" class="participants-list">
+            <div class="empty-state">
+              Noch keine Teilnehmer geladen.
+            </div>
+          </div>
+        </section>
+
+        <section class="panel chat-panel">
+          <div class="panel-header">
+            <h2>Chat</h2>
+            <span class="small-badge">Vorbereitung</span>
+          </div>
+
+          <div id="chatMessages" class="chat-messages">
+            <div class="empty-state">
+              Der Chat wird im nächsten Schritt aktiviert.
+            </div>
           </div>
 
           <div class="chat-input-row">
-            <input type="text" id="chatInput" placeholder="Nachricht eingeben...">
-            <button onclick="sendChatMessage()">Senden</button>
+            <input
+              type="text"
+              id="chatInput"
+              placeholder="Nachricht eingeben …"
+              disabled
+            />
+            <button id="sendChatBtn" class="btn btn-primary" type="button" disabled>
+              Senden
+            </button>
           </div>
-        </div>
-      </div>
-
-    </div>
+        </section>
+      </section>
+    </main>
   </div>
 
-  <script src="app.js"></script>
+  <script type="module" src="./js/main.js"></script>
 </body>
 </html>
