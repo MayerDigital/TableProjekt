@@ -22,6 +22,20 @@ function normalizeParticipantRow(row) {
   };
 }
 
+// 🔥 NEU: Owner wird später gesetzt
+export async function setRoomOwner(roomCode, participantId) {
+  const client = getSupabaseClient();
+
+  const { error } = await client
+    .from(TABLES.rooms)
+    .update({
+      owner_id: participantId,
+    })
+    .eq("code", roomCode);
+
+  if (error) throw error;
+}
+
 export async function createRoomInDb(
   roomCode,
   ownerName,
@@ -34,8 +48,9 @@ export async function createRoomInDb(
     .insert([
       {
         code: roomCode,
-        owner: ownerName,
+        owner: ownerName, // bleibt für Anzeige
         room_type: roomType,
+        owner_id: null, // 🔥 wird später gesetzt
       },
     ])
     .select()
@@ -194,6 +209,7 @@ export function subscribeParticipantsRealtime(roomCode, onChange) {
   setParticipantsChannel(channel);
 }
 
+// 🔥 HIER PASSIERT DIE MAGIE
 export async function joinPreparedRoom({
   roomCode,
   name,
@@ -211,6 +227,12 @@ export async function joinPreparedRoom({
     speaker: presence.speaker,
     mic: presence.mic,
   });
+
+  // 🔥 WENN NOCH KEIN OWNER → SETZE IHN
+  if (!room.owner_id && participant?.id) {
+    await setRoomOwner(roomCode, participant.id);
+    room.owner_id = participant.id; // lokal aktualisieren
+  }
 
   await loadParticipants(roomCode);
 
