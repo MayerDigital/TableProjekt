@@ -195,7 +195,7 @@ async function handleStartWork() {
 
   try {
     if (me?.working) {
-      await startWork(null, state.currentRoom); // 🔓 FREIGEBEN
+     await startWork(participantId, state.currentRoom); // 🔓 FREIGEBEN
       setStatus(dom.statusBox, "Arbeit beendet");
     } else {
       await startWork(participantId, state.currentRoom);
