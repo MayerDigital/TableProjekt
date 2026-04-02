@@ -1,14 +1,33 @@
-export const SUPABASE_URL = "https://zcpdiudjhzgyqgcsawjc.supabase.co";
-export const SUPABASE_KEY = "sb_publishable_PYWvX53ZCnSqCDL5iGjDgQ_VD-KN85H";
+export const APP_NAME = "TableProjekt™";
+export const APP_VERSION = "1.0.0-step1";
 
-export const STORAGE_BUCKET = "faceproject-files";
-
-export const RTC_CONFIG = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
-  ]
+export const DEFAULTS = {
+  roomPrefix: "TP",
+  statusMessage: "TableProjekt ist bereit.",
 };
 
-export const SAVED_NAME_KEY = "faceproject_name";
-export const SAVED_ROOM_KEY = "faceproject_room";
+export const SELECTORS = {
+  nameInput: "#nameInput",
+  roomInput: "#roomInput",
+  createRoomBtn: "#createRoomBtn",
+  joinRoomBtn: "#joinRoomBtn",
+  statusBox: "#statusBox",
+
+  visualStatus: "#visualStatus",
+  speakerStatus: "#speakerStatus",
+  micStatus: "#micStatus",
+
+  toggleVisualBtn: "#toggleVisualBtn",
+  toggleSpeakerBtn: "#toggleSpeakerBtn",
+  toggleMicBtn: "#toggleMicBtn",
+
+  currentRoomLabel: "#currentRoomLabel",
+  workStatusLabel: "#workStatusLabel",
+  participantCountBadge: "#participantCountBadge",
+  participantsList: "#participantsList",
+
+  chatInput: "#chatInput",
+  sendChatBtn: "#sendChatBtn",
+  chatMessages: "#chatMessages",
+  tableStage: "#tableStage",
+};
