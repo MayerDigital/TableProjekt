@@ -154,6 +154,12 @@ async function connectToRoom(roomCode, name, mode = "join") {
     console.log("🙋 Ich:", participant.id);
     console.log("✅ Bin ich Owner?", isOwner);
 
+    // 🔥 OWNER UI STEUERN (NEU)
+    const ownerBox = document.getElementById("ownerControls");
+    if (ownerBox) {
+      ownerBox.style.display = isOwner ? "block" : "none";
+    }
+
     const actualRoomType =
       result?.room?.room_type || selectedRoomType || DEFAULTS.roomType;
 
