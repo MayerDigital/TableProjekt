@@ -1,15 +1,44 @@
 import { TABLES } from "./config.js";
+import { dom } from "./dom.js";
 import { getSupabaseClient } from "./supabase.js";
-import { state, setChatMessages, setChatChannel } from "./state.js";
+import { state } from "./state.js";
+import { escapeHtml, setStatus } from "./utils.js";
 
-function normalizeChatRow(row) {
-  return {
-    id: row.id,
-    room_code: row.room_code || "",
-    sender: row.sender || "Unbekannt",
-    message: row.message || "",
-    created_at: row.created_at || null,
-  };
+let chatChannel = null;
+let currentChatRoom = null;
+
+function renderChatMessages(messages = []) {
+  if (!dom.chatMessages) return;
+
+  if (!messages.length) {
+    dom.chatMessages.innerHTML = `
+      <div class="empty-state">Noch keine Nachrichten im Raum.</div>
+    `;
+    return;
+  }
+
+  dom.chatMessages.innerHTML = messages
+    .map((msg) => {
+      const sender = escapeHtml(msg.sender || "Unbekannt");
+      const message = escapeHtml(msg.message || "");
+      const time = msg.created_at
+        ? new Date(msg.created_at).toLocaleTimeString("de-DE", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "";
+
+      return `
+        <div class="participant-card">
+          <div class="participant-name">${sender}</div>
+          <div style="margin: 6px 0 8px 0;">${message}</div>
+          <div class="participant-meta">
+            <span>${time}</span>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
 }
 
 export async function loadChatMessages(roomCode) {
@@ -23,46 +52,27 @@ export async function loadChatMessages(roomCode) {
 
   if (error) throw error;
 
-  const rows = Array.isArray(data) ? data.map(normalizeChatRow) : [];
-  setChatMessages(rows);
-  return rows;
-}
-
-export async function sendChatMessage(text) {
-  const client = getSupabaseClient();
-
-  const { data, error } = await client
-    .from(TABLES.chatMessages)
-    .insert([
-      {
-        room_code: state.currentRoom,
-        sender: state.currentUser.name,
-        message: text,
-      },
-    ])
-    .select();
-
-  if (error) throw error;
-
-  return data?.[0] || null;
+  renderChatMessages(Array.isArray(data) ? data : []);
 }
 
 export function unsubscribeChatRealtime() {
   const client = getSupabaseClient();
-  const channel = state.channels.chat;
 
-  if (channel) {
-    client.removeChannel(channel);
-    setChatChannel(null);
+  if (chatChannel) {
+    client.removeChannel(chatChannel);
+    chatChannel = null;
   }
+
+  currentChatRoom = null;
 }
 
-export function subscribeChatRealtime(roomCode, onChange) {
+export function subscribeChatRealtime(roomCode) {
   const client = getSupabaseClient();
 
   unsubscribeChatRealtime();
+  currentChatRoom = roomCode;
 
-  const channel = client
+  chatChannel = client
     .channel(`chat-room-${roomCode}`)
     .on(
       "postgres_changes",
@@ -74,10 +84,84 @@ export function subscribeChatRealtime(roomCode, onChange) {
       },
       async () => {
         await loadChatMessages(roomCode);
-        if (typeof onChange === "function") onChange();
       }
     )
     .subscribe();
+}
 
-  setChatChannel(channel);
+export async function sendChatMessage() {
+  const roomCode = state.currentRoom;
+  const sender = state.currentUser.name;
+  const message = dom.chatInput?.value?.trim() || "";
+
+  if (!roomCode) {
+    setStatus(dom.statusBox, "Bitte zuerst einem Raum beitreten.", true);
+    return;
+  }
+
+  if (!sender) {
+    setStatus(dom.statusBox, "Bitte zuerst deinen Namen eingeben.", true);
+    return;
+  }
+
+  if (!message) return;
+
+  const client = getSupabaseClient();
+
+  const { error } = await client.from(TABLES.chatMessages).insert([
+    {
+      room_code: roomCode,
+      sender,
+      message,
+    },
+  ]);
+
+  if (error) throw error;
+
+  if (dom.chatInput) {
+    dom.chatInput.value = "";
+    dom.chatInput.focus();
+  }
+}
+
+export async function initChatForRoom(roomCode) {
+  if (!dom.chatInput || !dom.sendChatBtn) return;
+
+  dom.chatInput.disabled = false;
+  dom.sendChatBtn.disabled = false;
+
+  await loadChatMessages(roomCode);
+  subscribeChatRealtime(roomCode);
+}
+
+export function bindChatEvents() {
+  dom.sendChatBtn?.addEventListener("click", async () => {
+    try {
+      await sendChatMessage();
+    } catch (error) {
+      console.error(error);
+      setStatus(
+        dom.statusBox,
+        `Chat-Fehler: ${error.message || "Nachricht konnte nicht gesendet werden."}`,
+        true
+      );
+    }
+  });
+
+  dom.chatInput?.addEventListener("keydown", async (event) => {
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+
+    try {
+      await sendChatMessage();
+    } catch (error) {
+      console.error(error);
+      setStatus(
+        dom.statusBox,
+        `Chat-Fehler: ${error.message || "Nachricht konnte nicht gesendet werden."}`,
+        true
+      );
+    }
+  });
 }
