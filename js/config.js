@@ -1,8 +1,8 @@
 export const APP_NAME = "TableProjekt™";
-export const APP_VERSION = "1.0.0-step2";
+export const APP_VERSION = "1.0.0-step3.1";
 
-export const SUPABASE_URL = "https://hhnhmwfzuakyldohxnsg.supabase.co";
-export const SUPABASE_ANON_KEY = "sb_publishable_wmuWdr8cllcThf-74YKpHw_0uV9ej30";
+export const SUPABASE_URL = "HIER_DEINE_SUPABASE_URL_EINFUEGEN";
+export const SUPABASE_ANON_KEY = "HIER_DEINEN_SUPABASE_ANON_KEY_EINFUEGEN";
 
 export const TABLES = {
   rooms: "rooms",
@@ -14,11 +14,18 @@ export const TABLES = {
 export const DEFAULTS = {
   roomPrefix: "TP",
   statusMessage: "TableProjekt ist bereit.",
+  roomType: "business",
+};
+
+export const ROOM_TYPES = {
+  business: "Geschäftlich",
+  creative: "Kreativ",
 };
 
 export const SELECTORS = {
   nameInput: "#nameInput",
   roomInput: "#roomInput",
+  roomTypeSelect: "#roomTypeSelect",
   createRoomBtn: "#createRoomBtn",
   joinRoomBtn: "#joinRoomBtn",
   statusBox: "#statusBox",
