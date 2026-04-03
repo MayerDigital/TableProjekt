@@ -4,6 +4,12 @@ import { setStatus } from "./utils.js";
 import { client } from "./supabase.js";
 
 // =============================
+// REALTIME
+// =============================
+
+let screenChannel = null;
+
+// =============================
 // HILFSFUNKTIONEN
 // =============================
 
@@ -12,13 +18,13 @@ function getStatusTarget() {
 }
 
 function getCurrentRoomValue() {
-  return state.currentRoom || state.state?.currentRoom || null;
+  return state.state?.currentRoom || state.currentRoom || null;
 }
 
 function getCurrentParticipantNameValue() {
   return (
-    state.currentParticipantName ||
     state.state?.currentUser?.name ||
+    state.currentParticipantName ||
     state.state?.currentParticipantName ||
     null
   );
@@ -83,6 +89,53 @@ function updateSingleScreenUI(slotIndex) {
   }
 }
 
+function preserveLocalStreams() {
+  const localStreams = {};
+  const myName = getCurrentParticipantNameValue();
+
+  for (let i = 0; i < 4; i++) {
+    ensureSlot(i);
+
+    if (
+      screenSlots[i].stream &&
+      screenSlots[i].owner &&
+      myName &&
+      screenSlots[i].owner === myName
+    ) {
+      localStreams[i] = {
+        owner: screenSlots[i].owner,
+        stream: screenSlots[i].stream,
+        active: screenSlots[i].active,
+      };
+    }
+  }
+
+  return localStreams;
+}
+
+function restoreLocalStreams(localStreams, rows) {
+  const myName = getCurrentParticipantNameValue();
+
+  (rows || []).forEach((s) => {
+    const index = Number(s.slot_index);
+
+    if (index >= 0 && index <= 3) {
+      ensureSlot(index);
+      screenSlots[index].owner = s.owner;
+      screenSlots[index].active = !!s.active;
+
+      if (
+        myName &&
+        s.owner === myName &&
+        localStreams[index] &&
+        localStreams[index].stream
+      ) {
+        screenSlots[index].stream = localStreams[index].stream;
+      }
+    }
+  });
+}
+
 // =============================
 // RESET
 // =============================
@@ -99,7 +152,7 @@ export function resetScreens() {
 }
 
 // =============================
-// SCREEN LADEN (Realtime Sync)
+// SCREEN LADEN (Initial + Refresh)
 // =============================
 
 export async function loadScreens() {
@@ -118,16 +171,8 @@ export async function loadScreens() {
     return;
   }
 
-  // Eigene lokale Streams merken
-  const localStreams = {};
-  for (let i = 0; i < 4; i++) {
-    ensureSlot(i);
-    if (screenSlots[i].stream) {
-      localStreams[i] = screenSlots[i].stream;
-    }
-  }
+  const localStreams = preserveLocalStreams();
 
-  // Alles zurücksetzen, aber lokale Streams nicht blind verlieren
   for (let i = 0; i < 4; i++) {
     ensureSlot(i);
     screenSlots[i].owner = null;
@@ -135,24 +180,46 @@ export async function loadScreens() {
     screenSlots[i].active = false;
   }
 
-  const myName = getCurrentParticipantNameValue();
-
-  (data || []).forEach((s) => {
-    const index = Number(s.slot_index);
-
-    if (index >= 0 && index <= 3) {
-      ensureSlot(index);
-      screenSlots[index].owner = s.owner;
-      screenSlots[index].active = true;
-
-      // Nur den eigenen lokalen Stream wieder anhängen
-      if (myName && s.owner === myName && localStreams[index]) {
-        screenSlots[index].stream = localStreams[index];
-      }
-    }
-  });
-
+  restoreLocalStreams(localStreams, data || []);
   renderScreens();
+}
+
+// =============================
+// REALTIME SCREEN SYNC
+// =============================
+
+function subscribeScreensRealtime() {
+  const roomCode = getCurrentRoomValue();
+  if (!roomCode) return;
+
+  if (screenChannel) {
+    client.removeChannel(screenChannel);
+    screenChannel = null;
+  }
+
+  screenChannel = client
+    .channel(`screen-share-${roomCode}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "screen_share",
+        filter: `room_code=eq.${roomCode}`,
+      },
+      async () => {
+        await loadScreens();
+      }
+    )
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        console.log("📺 Screen-Realtime aktiv für Raum:", roomCode);
+      }
+    });
+}
+
+export function refreshScreenRealtime() {
+  subscribeScreensRealtime();
 }
 
 // =============================
@@ -184,7 +251,6 @@ export async function startScreen(slotIndex) {
       return;
     }
 
-    // Falls eigener Stream auf diesem Slot schon läuft: erst stoppen
     if (
       screenSlots[slotIndex]?.active &&
       screenSlots[slotIndex]?.owner === participantName &&
@@ -202,7 +268,8 @@ export async function startScreen(slotIndex) {
     screenSlots[slotIndex].owner = participantName;
     screenSlots[slotIndex].active = true;
 
-    // Vorherigen eigenen Eintrag für denselben Slot aufräumen
+    renderScreens();
+
     await client
       .from("screen_share")
       .delete()
@@ -230,7 +297,7 @@ export async function startScreen(slotIndex) {
       };
     }
 
-    renderScreens();
+    await loadScreens();
     setStatus(getStatusTarget(), `Bildschirm ${slotIndex + 1} gestartet`);
   } catch (err) {
     console.error(err);
@@ -264,6 +331,8 @@ export async function stopScreen(slotIndex) {
       active: false,
     };
 
+    renderScreens();
+
     if (roomCode && participantName) {
       const { error } = await client
         .from("screen_share")
@@ -277,7 +346,7 @@ export async function stopScreen(slotIndex) {
       }
     }
 
-    renderScreens();
+    await loadScreens();
     setStatus(getStatusTarget(), `Bildschirm ${slotIndex + 1} beendet`);
   } catch (err) {
     console.error(err);
@@ -335,17 +404,35 @@ export async function toggleScreen() {
 // =============================
 
 export function bindScreenEvents() {
-  document.getElementById("shareScreenBtn1")?.addEventListener("click", () => startScreen(0));
-  document.getElementById("stopScreenBtn1")?.addEventListener("click", () => stopScreen(0));
+  document
+    .getElementById("shareScreenBtn1")
+    ?.addEventListener("click", () => startScreen(0));
+  document
+    .getElementById("stopScreenBtn1")
+    ?.addEventListener("click", () => stopScreen(0));
 
-  document.getElementById("shareScreenBtn2")?.addEventListener("click", () => startScreen(1));
-  document.getElementById("stopScreenBtn2")?.addEventListener("click", () => stopScreen(1));
+  document
+    .getElementById("shareScreenBtn2")
+    ?.addEventListener("click", () => startScreen(1));
+  document
+    .getElementById("stopScreenBtn2")
+    ?.addEventListener("click", () => stopScreen(1));
 
-  document.getElementById("shareScreenBtn3")?.addEventListener("click", () => startScreen(2));
-  document.getElementById("stopScreenBtn3")?.addEventListener("click", () => stopScreen(2));
+  document
+    .getElementById("shareScreenBtn3")
+    ?.addEventListener("click", () => startScreen(2));
+  document
+    .getElementById("stopScreenBtn3")
+    ?.addEventListener("click", () => stopScreen(2));
 
-  document.getElementById("shareScreenBtn4")?.addEventListener("click", () => startScreen(3));
-  document.getElementById("stopScreenBtn4")?.addEventListener("click", () => stopScreen(3));
+  document
+    .getElementById("shareScreenBtn4")
+    ?.addEventListener("click", () => startScreen(3));
+  document
+    .getElementById("stopScreenBtn4")
+    ?.addEventListener("click", () => stopScreen(3));
+
+  subscribeScreensRealtime();
 }
 
 // =============================
