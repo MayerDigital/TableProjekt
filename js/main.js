@@ -2,6 +2,7 @@ const savedId = localStorage.getItem("participantId");
 if (savedId) {
   state.currentUser.participantId = savedId;
 }
+
 import { APP_NAME, DEFAULTS, ROOM_TYPES } from "./config.js";
 import { dom } from "./dom.js";
 import {
@@ -31,6 +32,9 @@ import {
   leaveRoom // 🔥 NEU
 } from "./room.js";
 import { bindChatEvents, initChatForRoom } from "./chat.js";
+
+// 🔥 NEU: SCREEN IMPORT
+import { bindScreenEvents, loadScreens } from "./screen.js";
 
 function getSelectedRoomType() {
   return dom.roomTypeSelect?.value || DEFAULTS.roomType;
@@ -89,7 +93,6 @@ function updateUIVisibility() {
 
   if (workRow) workRow.style.display = "flex";
 
-  // 🔒 Teilnehmer entfernen nur für Owner
   if (removeBtn) {
     removeBtn.style.display = state.isOwner ? "inline-block" : "none";
   }
@@ -206,7 +209,6 @@ async function handleStartWork() {
       setStatus(dom.statusBox, "Du arbeitest jetzt");
     }
 
-    // 🔥 WICHTIG – echte Daten zurückholen
     const fresh = await loadParticipants(state.currentRoom);
     setParticipants(fresh);
     renderParticipants();
@@ -254,17 +256,18 @@ async function connectToRoom(roomCode, name, mode = "join") {
     await loadParticipants(roomCode);
     renderParticipants();
 
+    // 🔥 NEU: SCREENS LADEN
+    await loadScreens();
+
     subscribeParticipantsRealtime(roomCode, async () => {
       const myId = state.currentUser.participantId;
 
-      // 🔥 IMMER frisch aus DB laden
       const fresh = await loadParticipants(roomCode);
       setParticipants(fresh);
       renderParticipants();
 
       if (!myId) return;
 
-      // 🔥 DIREKTE EXISTENZPRÜFUNG
       const stillExists = fresh.some((p) => p.id === myId);
 
       if (!stillExists) {
@@ -385,10 +388,8 @@ function bindEvents() {
   dom.createRoomBtn?.addEventListener("click", handleCreateRoom);
   dom.joinRoomBtn?.addEventListener("click", handleJoinRoom);
 
-  // 🔥 WORK BUTTON
   document.getElementById("startWorkBtn")?.addEventListener("click", handleStartWork);
 
-  // 🚪 RAUM VERLASSEN (GETRENNT!)
   document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
     const myId = state.currentUser.participantId;
 
@@ -413,7 +414,6 @@ function bindEvents() {
     }
   });
 
-  // 👑 TEILNEHMER ENTFERNEN
   document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
     const myId = state.currentUser.participantId;
 
@@ -475,6 +475,9 @@ function bindEvents() {
   });
 
   bindChatEvents();
+
+  // 🔥 NEU: SCREEN EVENTS AKTIVIEREN
+  bindScreenEvents();
 }
 
 function initSupabaseCheck() {
