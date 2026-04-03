@@ -12,13 +12,52 @@ const RTC_CONFIG = {
 let peerConnections = {};
 let remoteStreams = {};
 let handledSignals = new Set();
+let pendingCandidates = {};
+let signalChannel = null;
 
 // =============================
-// KEY
+// HELFER
 // =============================
+
+function getCurrentRoomValue() {
+  return state.state?.currentRoom || state.currentRoom || null;
+}
+
+function getCurrentParticipantNameValue() {
+  return (
+    state.state?.currentUser?.name ||
+    state.currentParticipantName ||
+    state.state?.currentParticipantName ||
+    null
+  );
+}
 
 function getKey(user, slot) {
   return `${user}_${slot}`;
+}
+
+function ensurePendingCandidateList(key) {
+  if (!pendingCandidates[key]) {
+    pendingCandidates[key] = [];
+  }
+}
+
+async function flushPendingCandidates(key) {
+  const pc = peerConnections[key];
+  if (!pc) return;
+  if (!pc.remoteDescription) return;
+
+  ensurePendingCandidateList(key);
+
+  while (pendingCandidates[key].length > 0) {
+    const candidate = pendingCandidates[key].shift();
+
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (err) {
+      console.warn("ICE Flush Fehler:", err);
+    }
+  }
 }
 
 // =============================
@@ -26,11 +65,15 @@ function getKey(user, slot) {
 // =============================
 
 export async function notifyViewer(owner, slot) {
-  if (!state.currentRoom) return;
+  const roomCode = getCurrentRoomValue();
+  const me = getCurrentParticipantNameValue();
+
+  if (!roomCode || !me || !owner) return;
+  if (owner === me) return;
 
   await client.from("webrtc_signals").insert([{
-    room_code: state.currentRoom,
-    sender: state.currentParticipantName,
+    room_code: roomCode,
+    sender: me,
     target: owner,
     type: "viewer_ready",
     payload: { slot }
@@ -48,19 +91,32 @@ function createSender(viewer, slot, stream) {
     pc.addTrack(track, stream);
   });
 
-  pc.onicecandidate = async e => {
-    if (!e.candidate) return;
+  pc.onicecandidate = async (e) => {
+    const roomCode = getCurrentRoomValue();
+    const me = getCurrentParticipantNameValue();
+
+    if (!e.candidate || !roomCode || !me) return;
 
     await client.from("webrtc_signals").insert([{
-      room_code: state.currentRoom,
-      sender: state.currentParticipantName,
+      room_code: roomCode,
+      sender: me,
       target: viewer,
       type: "candidate",
       payload: { candidate: e.candidate, slot }
     }]);
   };
 
+  pc.onconnectionstatechange = () => {
+    console.log(`📡 Sender ${viewer} Slot ${slot} Status:`, pc.connectionState);
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    console.log(`🧊 ICE Sender ${viewer} Slot ${slot}:`, pc.iceConnectionState);
+  };
+
   peerConnections[getKey(viewer, slot)] = pc;
+  ensurePendingCandidateList(getKey(viewer, slot));
+
   return pc;
 }
 
@@ -71,30 +127,43 @@ function createSender(viewer, slot, stream) {
 function createViewer(owner, slot) {
   const pc = new RTCPeerConnection(RTC_CONFIG);
 
-  pc.ontrack = e => {
+  pc.ontrack = (e) => {
     const stream = e.streams[0];
+    const key = getKey(owner, slot);
 
-    remoteStreams[getKey(owner, slot)] = stream;
+    remoteStreams[key] = stream;
 
-    // 🔥 wichtig: direkt rendern
     if (window.renderRemoteStream) {
       window.renderRemoteStream(slot, stream);
     }
   };
 
-  pc.onicecandidate = async e => {
-    if (!e.candidate) return;
+  pc.onicecandidate = async (e) => {
+    const roomCode = getCurrentRoomValue();
+    const me = getCurrentParticipantNameValue();
+
+    if (!e.candidate || !roomCode || !me) return;
 
     await client.from("webrtc_signals").insert([{
-      room_code: state.currentRoom,
-      sender: state.currentParticipantName,
+      room_code: roomCode,
+      sender: me,
       target: owner,
       type: "candidate",
       payload: { candidate: e.candidate, slot }
     }]);
   };
 
+  pc.onconnectionstatechange = () => {
+    console.log(`📺 Viewer ${owner} Slot ${slot} Status:`, pc.connectionState);
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    console.log(`🧊 ICE Viewer ${owner} Slot ${slot}:`, pc.iceConnectionState);
+  };
+
   peerConnections[getKey(owner, slot)] = pc;
+  ensurePendingCandidateList(getKey(owner, slot));
+
   return pc;
 }
 
@@ -102,23 +171,26 @@ function createViewer(owner, slot) {
 // SIGNAL HANDLER (HERZ)
 // =============================
 
-export async function handleSignal(signal, localScreens) {
+export async function handleSignal(signal, localScreens = {}) {
+  if (!signal || !signal.id) return;
+  if (handledSignals.has(signal.id)) return;
 
-  if (!signal || handledSignals.has(signal.id)) return;
-  handledSignals.add(signal.id);
+  const me = getCurrentParticipantNameValue();
+  if (!me) return;
 
   const { type, sender, target, payload } = signal;
   const slot = payload?.slot;
 
-  if (target !== state.currentParticipantName) return;
+  if (target !== me) return;
+
+  handledSignals.add(signal.id);
 
   try {
-
     // =============================
     // VIEWER READY → Sender reagiert
     // =============================
     if (type === "viewer_ready") {
-      const stream = localScreens[slot]?.stream;
+      const stream = localScreens?.[slot]?.stream;
       if (!stream) return;
 
       let pc = peerConnections[getKey(sender, slot)];
@@ -131,19 +203,20 @@ export async function handleSignal(signal, localScreens) {
       await pc.setLocalDescription(offer);
 
       await client.from("webrtc_signals").insert([{
-        room_code: state.currentRoom,
-        sender: state.currentParticipantName,
+        room_code: getCurrentRoomValue(),
+        sender: me,
         target: sender,
         type: "offer",
         payload: { offer, slot }
       }]);
+
+      return;
     }
 
     // =============================
     // OFFER → Viewer antwortet
     // =============================
     if (type === "offer") {
-
       let pc = peerConnections[getKey(sender, slot)];
 
       if (!pc) {
@@ -154,16 +227,20 @@ export async function handleSignal(signal, localScreens) {
         new RTCSessionDescription(payload.offer)
       );
 
+      await flushPendingCandidates(getKey(sender, slot));
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
       await client.from("webrtc_signals").insert([{
-        room_code: state.currentRoom,
-        sender: state.currentParticipantName,
+        room_code: getCurrentRoomValue(),
+        sender: me,
         target: sender,
         type: "answer",
         payload: { answer, slot }
       }]);
+
+      return;
     }
 
     // =============================
@@ -176,6 +253,9 @@ export async function handleSignal(signal, localScreens) {
       await pc.setRemoteDescription(
         new RTCSessionDescription(payload.answer)
       );
+
+      await flushPendingCandidates(getKey(sender, slot));
+      return;
     }
 
     // =============================
@@ -183,22 +263,31 @@ export async function handleSignal(signal, localScreens) {
     // =============================
     if (type === "candidate") {
       const pc = peerConnections[getKey(sender, slot)];
-      if (!pc) return;
+      const key = getKey(sender, slot);
+
+      if (!pc) {
+        ensurePendingCandidateList(key);
+        pendingCandidates[key].push(payload.candidate);
+        return;
+      }
+
+      if (!pc.remoteDescription) {
+        ensurePendingCandidateList(key);
+        pendingCandidates[key].push(payload.candidate);
+        return;
+      }
 
       try {
         await pc.addIceCandidate(
           new RTCIceCandidate(payload.candidate)
         );
-      } catch {
-        // Retry fallback (wichtig bei langsamen Verbindungen)
-        setTimeout(async () => {
-          try {
-            await pc.addIceCandidate(
-              new RTCIceCandidate(payload.candidate)
-            );
-          } catch {}
-        }, 300);
+      } catch (err) {
+        console.warn("ICE Candidate Fehler, wird gepuffert:", err);
+        ensurePendingCandidateList(key);
+        pendingCandidates[key].push(payload.candidate);
       }
+
+      return;
     }
 
   } catch (err) {
@@ -207,15 +296,131 @@ export async function handleSignal(signal, localScreens) {
 }
 
 // =============================
+// ALTE / OFFENE SIGNALE LADEN
+// =============================
+
+export async function loadPendingSignals(localScreens = {}) {
+  const roomCode = getCurrentRoomValue();
+  const me = getCurrentParticipantNameValue();
+
+  if (!roomCode || !me) return;
+
+  const { data, error } = await client
+    .from("webrtc_signals")
+    .select("*")
+    .eq("room_code", roomCode)
+    .eq("target", me)
+    .order("id", { ascending: true });
+
+  if (error) {
+    console.error("Signal-Ladefehler:", error);
+    return;
+  }
+
+  for (const signal of data || []) {
+    await handleSignal(signal, localScreens);
+  }
+}
+
+// =============================
+// REALTIME ABO
+// =============================
+
+export function subscribeWebRTC(localScreens = {}) {
+  const roomCode = getCurrentRoomValue();
+  if (!roomCode) return;
+
+  if (signalChannel) {
+    client.removeChannel(signalChannel);
+    signalChannel = null;
+  }
+
+  signalChannel = client
+    .channel(`webrtc-signals-${roomCode}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "webrtc_signals",
+        filter: `room_code=eq.${roomCode}`
+      },
+      async (payload) => {
+        await handleSignal(payload.new, localScreens);
+      }
+    )
+    .subscribe((status) => {
+      console.log("📡 WebRTC Realtime:", status, roomCode);
+    });
+}
+
+// =============================
+// REMOTE STREAM HOLEN
+// =============================
+
+export function getRemoteStream(owner, slot) {
+  return remoteStreams[getKey(owner, slot)] || null;
+}
+
+// =============================
+// REMOTE STREAM ENTFERNEN
+// =============================
+
+export function clearRemoteStream(owner, slot) {
+  const key = getKey(owner, slot);
+
+  if (remoteStreams[key]) {
+    delete remoteStreams[key];
+  }
+
+  if (window.clearRemoteStream) {
+    window.clearRemoteStream(slot);
+  }
+}
+
+// =============================
+// CLEANUP EINER VERBINDUNG
+// =============================
+
+export function closeConnection(user, slot) {
+  const key = getKey(user, slot);
+
+  if (peerConnections[key]) {
+    try {
+      peerConnections[key].close();
+    } catch {}
+    delete peerConnections[key];
+  }
+
+  if (remoteStreams[key]) {
+    delete remoteStreams[key];
+  }
+
+  if (pendingCandidates[key]) {
+    delete pendingCandidates[key];
+  }
+}
+
+// =============================
 // CLEANUP (wichtig bei Raumwechsel)
 // =============================
 
 export function resetWebRTC() {
-  Object.values(peerConnections).forEach(pc => {
-    try { pc.close(); } catch {}
+  Object.values(peerConnections).forEach((pc) => {
+    try {
+      pc.close();
+    } catch {}
   });
 
   peerConnections = {};
   remoteStreams = {};
+  pendingCandidates = {};
   handledSignals.clear();
+
+  if (signalChannel) {
+    try {
+      client.removeChannel(signalChannel);
+    } catch {}
+    signalChannel = null;
+  }
 }
