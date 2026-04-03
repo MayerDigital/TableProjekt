@@ -300,6 +300,36 @@
     </main>
   </div>
 
+  <script>
+window.renderRemoteStream = function(slot, stream) {
+  const video = document.getElementById(`screenVideo${slot + 1}`);
+  const placeholder = document.getElementById(`screenPlaceholder${slot + 1}`);
+
+  if (video) {
+    video.srcObject = stream;
+    video.style.display = "block";
+  }
+
+  if (placeholder) {
+    placeholder.style.display = "none";
+  }
+};
+
+window.clearRemoteStream = function(slot) {
+  const video = document.getElementById(`screenVideo${slot + 1}`);
+  const placeholder = document.getElementById(`screenPlaceholder${slot + 1}`);
+
+  if (video) {
+    video.srcObject = null;
+    video.style.display = "none";
+  }
+
+  if (placeholder) {
+    placeholder.style.display = "flex";
+    placeholder.textContent = "Keine Freigabe aktiv";
+  }
+};
+</script>
   <script type="module" src="./js/main.js?v=7"></script>
 </body>
 </html>
