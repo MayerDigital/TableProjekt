@@ -34,7 +34,7 @@ import {
 import { bindChatEvents, initChatForRoom } from "./chat.js";
 
 // 🔥 NEU: SCREEN IMPORT
-import { bindScreenEvents, loadScreens, refreshScreenRealtime } from "./screen.js";
+import { bindScreenEvents, loadScreens, refreshScreenRealtime } from "./screen.js?v=2";
 
 function getSelectedRoomType() {
   return dom.roomTypeSelect?.value || DEFAULTS.roomType;
