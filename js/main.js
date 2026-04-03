@@ -34,7 +34,7 @@ import {
 import { bindChatEvents, initChatForRoom } from "./chat.js";
 
 // 🔥 NEU: SCREEN IMPORT
-import { bindScreenEvents, loadScreens } from "./screen.js";
+import { bindScreenEvents, loadScreens, refreshScreenRealtime } from "./screen.js";
 
 function getSelectedRoomType() {
   return dom.roomTypeSelect?.value || DEFAULTS.roomType;
@@ -258,6 +258,7 @@ async function connectToRoom(roomCode, name, mode = "join") {
 
     // 🔥 NEU: SCREENS LADEN
     await loadScreens();
+    refreshScreenRealtime();
 
     subscribeParticipantsRealtime(roomCode, async () => {
       const myId = state.currentUser.participantId;
