@@ -3,6 +3,12 @@ import * as state from "./state.js";
 import { setStatus } from "./utils.js";
 import { client } from "./supabase.js";
 
+// 🔥 NEU: WEBRTC
+import {
+  notifyViewer,
+  getRemoteStream
+} from "./webrtc.js";
+
 // =============================
 // REALTIME
 // =============================
@@ -55,6 +61,23 @@ function updateSingleScreenUI(slotIndex) {
 
   const slot = screenSlots[slotIndex];
   const { status, video, placeholder } = getSlotElements(slotIndex);
+
+  const myName = getCurrentParticipantNameValue();
+
+  // =============================
+  // WEBRTC: Remote Stream prüfen
+  // =============================
+
+  if (!slot.stream && slot.owner && slot.owner !== myName) {
+    const remoteStream = getRemoteStream(slot.owner, slotIndex);
+
+    if (remoteStream) {
+      screenSlots[slotIndex].stream = remoteStream;
+    } else {
+      // Viewer anmelden
+      notifyViewer(slot.owner, slotIndex);
+    }
+  }
 
   if (status) {
     status.textContent = slot.active
@@ -355,47 +378,6 @@ export async function stopScreen(slotIndex) {
       "Stop Fehler: " + (err?.message || "Unbekannter Fehler"),
       true
     );
-  }
-}
-
-// =============================
-// STOP ALLE EIGENEN SCREENS
-// =============================
-
-export async function stopAllMyScreens() {
-  const participantName = getCurrentParticipantNameValue();
-
-  for (let i = 0; i < 4; i++) {
-    ensureSlot(i);
-
-    if (screenSlots[i]?.owner === participantName) {
-      await stopScreen(i);
-    }
-  }
-}
-
-// =============================
-// TOGGLE (UI Button)
-// =============================
-
-export async function toggleScreen() {
-  const input = prompt("Screen wählen (1-4)", "1");
-  if (!input) return;
-
-  const slot = parseInt(input, 10) - 1;
-
-  if (slot < 0 || slot > 3) {
-    setStatus(getStatusTarget(), "Bitte 1-4 eingeben", true);
-    return;
-  }
-
-  const participantName = getCurrentParticipantNameValue();
-  const isMine = screenSlots[slot]?.owner === participantName;
-
-  if (isMine) {
-    await stopScreen(slot);
-  } else {
-    await startScreen(slot);
   }
 }
 
