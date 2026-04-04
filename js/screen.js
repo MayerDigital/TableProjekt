@@ -1,7 +1,7 @@
 import { screenSlots } from "./state.js";
 import * as state from "./state.js";
 import { setStatus } from "./utils.js";
-import { client } from "./supabase.js";
+import { getSupabaseClient } from "./supabase.js";
 
 // 🔥 NEU: WEBRTC
 import {
@@ -182,6 +182,8 @@ export async function loadScreens() {
   const roomCode = getCurrentRoomValue();
   if (!roomCode) return;
 
+  const client = getSupabaseClient();
+
   const { data, error } = await client
     .from("screen_share")
     .select("*")
@@ -214,6 +216,8 @@ export async function loadScreens() {
 function subscribeScreensRealtime() {
   const roomCode = getCurrentRoomValue();
   if (!roomCode) return;
+
+  const client = getSupabaseClient();
 
   if (screenChannel) {
     client.removeChannel(screenChannel);
@@ -293,6 +297,8 @@ export async function startScreen(slotIndex) {
 
     renderScreens();
 
+    const client = getSupabaseClient();
+
     await client
       .from("screen_share")
       .delete()
@@ -357,6 +363,8 @@ export async function stopScreen(slotIndex) {
     renderScreens();
 
     if (roomCode && participantName) {
+      const client = getSupabaseClient();
+
       const { error } = await client
         .from("screen_share")
         .delete()
