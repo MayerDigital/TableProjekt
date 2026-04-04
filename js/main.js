@@ -1,7 +1,4 @@
 const savedId = localStorage.getItem("participantId");
-if (savedId) {
-  state.currentUser.participantId = savedId;
-}
 
 import { APP_NAME, DEFAULTS, ROOM_TYPES } from "./config.js";
 import { dom } from "./dom.js";
@@ -29,12 +26,14 @@ import {
   updateCurrentParticipantPresence,
   startWork,
   removeParticipant,
-  leaveRoom // 🔥 NEU
+  leaveRoom
 } from "./room.js";
 import { bindChatEvents, initChatForRoom } from "./chat.js";
+import { bindScreenEvents, loadScreens } from "./screen.js";
 
-// 🔥 NEU: SCREEN IMPORT
-import { bindScreenEvents, loadScreens, refreshScreenRealtime } from "./screen.js";
+if (savedId) {
+  state.currentUser.participantId = savedId;
+}
 
 function getSelectedRoomType() {
   return dom.roomTypeSelect?.value || DEFAULTS.roomType;
@@ -78,7 +77,6 @@ function renderRoomInfo() {
   );
 }
 
-// 🔥 ZENTRALE BUTTON-STEUERUNG (NUR workRow!)
 function updateUIVisibility() {
   const hasRoom = !!state.currentRoom;
   const hasParticipant = !!state.currentUser.participantId;
@@ -98,7 +96,6 @@ function updateUIVisibility() {
   }
 }
 
-// 🔥 BUTTON STATUS (arbeitet / frei)
 function updateWorkButton() {
   const btn = document.getElementById("startWorkBtn");
   if (!btn) return;
@@ -146,7 +143,6 @@ function renderParticipants() {
       const visual = participant.visual ? "Visuell an" : "Visuell aus";
       const speaker = participant.speaker ? "Lautsprecher an" : "Lautsprecher aus";
       const mic = participant.mic ? "Mikro an" : "Mikro aus";
-
       const working = participant.working ? "🔥 Arbeitet gerade" : "Beobachtet";
 
       return `
@@ -189,7 +185,6 @@ function seedLocalParticipantPreview() {
   renderParticipants();
 }
 
-// 🔥 ARBEIT START / STOP (FIX!)
 async function handleStartWork() {
   const participantId = state.currentUser.participantId;
 
@@ -238,12 +233,7 @@ async function connectToRoom(roomCode, name, mode = "join") {
     const room = result.room;
     const participant = result.participant;
 
-    const isOwner = room.owner_id === participant.id;
-    state.isOwner = isOwner;
-
-    console.log("👑 Owner ID:", room.owner_id);
-    console.log("🙋 Ich:", participant.id);
-    console.log("✅ Bin ich Owner?", isOwner);
+    state.isOwner = room.owner_id === participant.id;
 
     updateUIVisibility();
 
@@ -256,9 +246,7 @@ async function connectToRoom(roomCode, name, mode = "join") {
     await loadParticipants(roomCode);
     renderParticipants();
 
-    // 🔥 NEU: SCREENS LADEN
     await loadScreens();
-    refreshScreenRealtime();
 
     subscribeParticipantsRealtime(roomCode, async () => {
       const myId = state.currentUser.participantId;
@@ -273,13 +261,10 @@ async function connectToRoom(roomCode, name, mode = "join") {
 
       if (!stillExists) {
         setStatus(dom.statusBox, "❌ Du wurdest entfernt", true);
-
         localStorage.removeItem("participantId");
-
         state.currentUser.participantId = null;
         setCurrentRoom(null);
         setParticipants([]);
-
         renderParticipants();
       }
     });
@@ -393,21 +378,16 @@ function bindEvents() {
 
   document.getElementById("leaveRoomBtn")?.addEventListener("click", async () => {
     const myId = state.currentUser.participantId;
-
     if (!myId) return;
 
     try {
       await leaveRoom(myId);
-
       localStorage.removeItem("participantId");
-
       state.currentUser.participantId = null;
       setCurrentRoom(null);
       setParticipants([]);
-
       renderParticipants();
       updateUIVisibility();
-
       setStatus(dom.statusBox, "Du hast den Raum verlassen");
     } catch (e) {
       console.error(e);
@@ -417,7 +397,6 @@ function bindEvents() {
 
   document.getElementById("removeUserBtn")?.addEventListener("click", async () => {
     const myId = state.currentUser.participantId;
-
     const others = state.participants.filter((p) => p.id !== myId);
 
     if (others.length === 0) {
@@ -426,9 +405,7 @@ function bindEvents() {
     }
 
     const list = others.map((p, i) => `${i + 1}: ${p.name}`).join("\n");
-
     const input = prompt(`Wen entfernen?\n${list}`);
-
     const index = parseInt(input) - 1;
 
     if (isNaN(index) || !others[index]) {
@@ -440,9 +417,7 @@ function bindEvents() {
 
     try {
       await removeParticipant(target.id);
-
       setStatus(dom.statusBox, `${target.name} entfernt`);
-
       const fresh = await loadParticipants(state.currentRoom);
       setParticipants(fresh);
       renderParticipants();
@@ -476,8 +451,6 @@ function bindEvents() {
   });
 
   bindChatEvents();
-
-  // 🔥 NEU: SCREEN EVENTS AKTIVIEREN
   bindScreenEvents();
 }
 
