@@ -53,11 +53,6 @@
         </label>
 
         <label class="field">
-         <span>Bereich</span>
-         <select id="roomTypeSelect" class="select-field">
-           <option value="business">Geschäftlich</option>
-           <option value="creative">Kreativ</option>
-         </select>
           <span>Bereich</span>
           <select id="roomTypeSelect" class="select-field">
             <option value="business">Geschäftlich</option>
@@ -136,23 +131,18 @@
           </div>
         </div>
 
-        <!-- 🔥 NEUE SAUBERE ZEILE -->
-        <div id="workRow" style="display:none; margin-bottom:15px; display:flex; gap:10px; align-items:center;">
-          
-          <button id="startWorkBtn" class="btn btn-primary">
-          Ich arbeite jetzt
+        <div id="workRow" style="display:none; margin-bottom:15px; gap:10px; align-items:center;">
+          <button id="startWorkBtn" class="btn btn-primary" type="button">
             Ich arbeite jetzt
           </button>
-          <button id="leaveRoomBtn" class="btn btn-secondary">
-          Raum verlassen
-           </button>
+
+          <button id="leaveRoomBtn" class="btn btn-secondary" type="button">
             Raum verlassen
           </button>
-          <button id="removeUserBtn" class="btn btn-light">
-          Teilnehmer entfernen
+
+          <button id="removeUserBtn" class="btn btn-light" type="button">
             Teilnehmer entfernen
           </button>
-
         </div>
 
         <div class="table-stage" id="tableStage">
@@ -166,7 +156,6 @@
           </div>
         </div>
 
-        <!-- 🔥 BILDSCHIRMFREIGABEN -->
         <div class="screen-share-section" id="screenShareSection">
           <div class="panel-header">
             <h2>Bildschirmfreigaben</h2>
@@ -310,8 +299,6 @@
       </section>
     </main>
   </div>
-  
-<script type="module" src="./js/main.js?v=7"></script>
 
   <script type="module" src="./js/main.js?v=7"></script>
 </body>
