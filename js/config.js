@@ -1,4 +1,4 @@
-export const APP_NAME = "TableProjekt™";
+export const APP_NAME = "TableProject™";
 export const APP_VERSION = "1.0.1-step2b";
 
 export const SUPABASE_URL = "https://hhnhmwfzuakyldohxnsg.supabase.co";
@@ -19,7 +19,7 @@ export const ROOM_TYPES = {
 export const DEFAULTS = {
   roomPrefix: "TP",
   roomType: "business",
-  statusMessage: "TableProjekt ist bereit.",
+  statusMessage: "TableProject ist bereit.",
 };
 
 export const SELECTORS = {
