@@ -1,6 +1,6 @@
 // js/webrtc.js
 
-import { client } from "./supabase.js";
+import { getSupabaseClient } from "./supabase.js";
 import * as state from "./state.js";
 
 const RTC_CONFIG = {
@@ -71,6 +71,8 @@ export async function notifyViewer(owner, slot) {
   if (!roomCode || !me || !owner) return;
   if (owner === me) return;
 
+  const client = getSupabaseClient();
+
   await client.from("webrtc_signals").insert([{
     room_code: roomCode,
     sender: me,
@@ -96,6 +98,8 @@ function createSender(viewer, slot, stream) {
     const me = getCurrentParticipantNameValue();
 
     if (!e.candidate || !roomCode || !me) return;
+
+    const client = getSupabaseClient();
 
     await client.from("webrtc_signals").insert([{
       room_code: roomCode,
@@ -144,6 +148,8 @@ function createViewer(owner, slot) {
 
     if (!e.candidate || !roomCode || !me) return;
 
+    const client = getSupabaseClient();
+
     await client.from("webrtc_signals").insert([{
       room_code: roomCode,
       sender: me,
@@ -186,9 +192,6 @@ export async function handleSignal(signal, localScreens = {}) {
   handledSignals.add(signal.id);
 
   try {
-    // =============================
-    // VIEWER READY → Sender reagiert
-    // =============================
     if (type === "viewer_ready") {
       const stream = localScreens?.[slot]?.stream;
       if (!stream) return;
@@ -202,6 +205,8 @@ export async function handleSignal(signal, localScreens = {}) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
+      const client = getSupabaseClient();
+
       await client.from("webrtc_signals").insert([{
         room_code: getCurrentRoomValue(),
         sender: me,
@@ -213,9 +218,6 @@ export async function handleSignal(signal, localScreens = {}) {
       return;
     }
 
-    // =============================
-    // OFFER → Viewer antwortet
-    // =============================
     if (type === "offer") {
       let pc = peerConnections[getKey(sender, slot)];
 
@@ -232,6 +234,8 @@ export async function handleSignal(signal, localScreens = {}) {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
+      const client = getSupabaseClient();
+
       await client.from("webrtc_signals").insert([{
         room_code: getCurrentRoomValue(),
         sender: me,
@@ -243,9 +247,6 @@ export async function handleSignal(signal, localScreens = {}) {
       return;
     }
 
-    // =============================
-    // ANSWER → Sender finalisiert
-    // =============================
     if (type === "answer") {
       const pc = peerConnections[getKey(sender, slot)];
       if (!pc) return;
@@ -258,9 +259,6 @@ export async function handleSignal(signal, localScreens = {}) {
       return;
     }
 
-    // =============================
-    // ICE Candidate
-    // =============================
     if (type === "candidate") {
       const pc = peerConnections[getKey(sender, slot)];
       const key = getKey(sender, slot);
@@ -305,6 +303,8 @@ export async function loadPendingSignals(localScreens = {}) {
 
   if (!roomCode || !me) return;
 
+  const client = getSupabaseClient();
+
   const { data, error } = await client
     .from("webrtc_signals")
     .select("*")
@@ -329,6 +329,8 @@ export async function loadPendingSignals(localScreens = {}) {
 export function subscribeWebRTC(localScreens = {}) {
   const roomCode = getCurrentRoomValue();
   if (!roomCode) return;
+
+  const client = getSupabaseClient();
 
   if (signalChannel) {
     client.removeChannel(signalChannel);
@@ -406,6 +408,8 @@ export function closeConnection(user, slot) {
 // =============================
 
 export function resetWebRTC() {
+  const client = getSupabaseClient();
+
   Object.values(peerConnections).forEach((pc) => {
     try {
       pc.close();
