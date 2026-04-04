@@ -3,7 +3,6 @@ import * as state from "./state.js";
 import { setStatus } from "./utils.js";
 import { getSupabaseClient } from "./supabase.js";
 
-
 // =============================
 // REALTIME
 // =============================
@@ -56,13 +55,6 @@ function updateSingleScreenUI(slotIndex) {
 
   const slot = screenSlots[slotIndex];
   const { status, video, placeholder } = getSlotElements(slotIndex);
-
-  const myName = getCurrentParticipantNameValue();
-
-  // =============================
-  // WEBRTC: Remote Stream prüfen
-  // =============================
-
 
   if (status) {
     status.textContent = slot.active
