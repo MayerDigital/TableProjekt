@@ -53,6 +53,11 @@
         </label>
 
         <label class="field">
+         <span>Bereich</span>
+         <select id="roomTypeSelect" class="select-field">
+           <option value="business">Geschäftlich</option>
+           <option value="creative">Kreativ</option>
+         </select>
           <span>Bereich</span>
           <select id="roomTypeSelect" class="select-field">
             <option value="business">Geschäftlich</option>
@@ -133,15 +138,21 @@
 
         <!-- 🔥 NEUE SAUBERE ZEILE -->
         <div id="workRow" style="display:none; margin-bottom:15px; display:flex; gap:10px; align-items:center;">
+          
           <button id="startWorkBtn" class="btn btn-primary">
+          Ich arbeite jetzt
             Ich arbeite jetzt
           </button>
           <button id="leaveRoomBtn" class="btn btn-secondary">
+          Raum verlassen
+           </button>
             Raum verlassen
           </button>
           <button id="removeUserBtn" class="btn btn-light">
+          Teilnehmer entfernen
             Teilnehmer entfernen
           </button>
+
         </div>
 
         <div class="table-stage" id="tableStage">
@@ -299,37 +310,9 @@
       </section>
     </main>
   </div>
+  
+<script type="module" src="./js/main.js?v=7"></script>
 
-  <script>
-window.renderRemoteStream = function(slot, stream) {
-  const video = document.getElementById(`screenVideo${slot + 1}`);
-  const placeholder = document.getElementById(`screenPlaceholder${slot + 1}`);
-
-  if (video) {
-    video.srcObject = stream;
-    video.style.display = "block";
-  }
-
-  if (placeholder) {
-    placeholder.style.display = "none";
-  }
-};
-
-window.clearRemoteStream = function(slot) {
-  const video = document.getElementById(`screenVideo${slot + 1}`);
-  const placeholder = document.getElementById(`screenPlaceholder${slot + 1}`);
-
-  if (video) {
-    video.srcObject = null;
-    video.style.display = "none";
-  }
-
-  if (placeholder) {
-    placeholder.style.display = "flex";
-    placeholder.textContent = "Keine Freigabe aktiv";
-  }
-};
-</script>
   <script type="module" src="./js/main.js?v=7"></script>
 </body>
 </html>
