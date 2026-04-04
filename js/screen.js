@@ -3,11 +3,6 @@ import * as state from "./state.js";
 import { setStatus } from "./utils.js";
 import { getSupabaseClient } from "./supabase.js";
 
-// 🔥 NEU: WEBRTC
-import {
-  notifyViewer,
-  getRemoteStream
-} from "./webrtc.js";
 
 // =============================
 // REALTIME
@@ -68,16 +63,6 @@ function updateSingleScreenUI(slotIndex) {
   // WEBRTC: Remote Stream prüfen
   // =============================
 
-  if (!slot.stream && slot.owner && slot.owner !== myName) {
-    const remoteStream = getRemoteStream(slot.owner, slotIndex);
-
-    if (remoteStream) {
-      screenSlots[slotIndex].stream = remoteStream;
-    } else {
-      // Viewer anmelden
-      notifyViewer(slot.owner, slotIndex);
-    }
-  }
 
   if (status) {
     status.textContent = slot.active
