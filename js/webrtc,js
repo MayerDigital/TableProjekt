@@ -9,6 +9,7 @@ const RTC_CONFIG = {
   ]
 };
 
+
 let peerConnections = {};
 let remoteStreams = {};
 let handledSignals = new Set();
