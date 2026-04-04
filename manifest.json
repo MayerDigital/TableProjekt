@@ -1,6 +1,6 @@
 {
-  "name": "FaceProject",
-  "short_name": "FaceProject",
+  "name": "TableProject",
+  "short_name": "TableProject",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ff6a00",
