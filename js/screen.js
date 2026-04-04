@@ -7,7 +7,7 @@ import { client } from "./supabase.js";
 import {
   notifyViewer,
   getRemoteStream
-} from "./webrtc.js?v=2";
+} from "./webrtc.js";
 
 // =============================
 // REALTIME
