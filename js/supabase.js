@@ -29,12 +29,8 @@ export function getSupabaseClient() {
     console.log("Supabase Client initialisiert");
 
     return supabaseClient;
-
   } catch (error) {
     console.error("Supabase Initialisierung fehlgeschlagen:", error);
     throw error;
   }
 }
-
-// 🔥 zusätzlicher direkter Export für andere Module
-export const client = getSupabaseClient();
